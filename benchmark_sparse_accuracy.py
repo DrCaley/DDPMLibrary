@@ -80,7 +80,7 @@ def run_benchmark(
     n_frames: int,
     obs_counts: list[int],
     single_step: bool,
-    t_start: int,
+    t_start: int | None,
     device: str,
     seed: int,
 ) -> None:
@@ -104,7 +104,8 @@ def run_benchmark(
     t0 = time.time()
     ddpm = DDPM(device=device)
     print(f"  Loaded on {ddpm.device} in {time.time() - t0:.1f}s")
-    mode = "single_step" if single_step else f"iterative (t_start={t_start})"
+    eff_t = t_start if t_start is not None else (50 if single_step else 75)
+    mode = f"single_step (t={eff_t})" if single_step else f"iterative (t_start={eff_t})"
     print(f"  Inference mode: {mode}\n")
 
     ocean_ij = np.argwhere(ocean_mask)  # list of (i, j) for valid cells
@@ -192,8 +193,9 @@ def main() -> None:
                    help="Number of sparse observations per trial")
     p.add_argument("--iterative", action="store_true",
                    help="Use full RePaint iterative inference instead of single-step")
-    p.add_argument("--t-start", type=int, default=249,
-                   help="Diffusion step to query (single-step) or start from (iterative)")
+    p.add_argument("--t-start", type=int, default=None,
+                   help="Diffusion step to query (single-step) or start from (iterative). "
+                        "Default: 50 for single-step, 75 for iterative.")
     p.add_argument("--device", default="auto")
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()

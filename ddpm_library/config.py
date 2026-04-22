@@ -37,6 +37,10 @@ _ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 WEIGHTS_PATH = _ASSETS_DIR / "weights.pt"
 LAT_LON_GRID_PATH = _ASSETS_DIR / "lat_lon_grid.npz"
 
-# ── Default RePaint inference parameters ──────────────────────────────
-DEFAULT_T_START = N_STEPS - 1         # full reverse chain
-DEFAULT_RESAMPLE_STEPS = 3            # RePaint repaint iterations per step
+# ── Default inference parameters (match scripts/eval_helmholtz_split.py) ─
+# Single-step: one UNet call at a moderate noise level (not t=T-1, which
+# is near-pure noise and starves the model of signal).
+DEFAULT_SINGLE_STEP_T = 50
+# Iterative RePaint: partial reverse chain with 3 re-samplings per step.
+DEFAULT_T_START = 75
+DEFAULT_RESAMPLE_STEPS = 3

@@ -25,7 +25,8 @@ import numpy as np
 import torch
 
 from .config import (
-    DEFAULT_RESAMPLE_STEPS, DEFAULT_T_START, FULL_H, FULL_W, IRR_SPEED,
+    DEFAULT_RESAMPLE_STEPS, DEFAULT_SINGLE_STEP_T, DEFAULT_T_START,
+    FULL_H, FULL_W, IRR_SPEED,
     MAX_BETA, MIN_BETA, N_STEPS, OCEAN_H, OCEAN_W, WEIGHTS_PATH,
 )
 from .model import HelmholtzSplitSchedule, MyUNet_Helmholtz_Split_FiLM_MultiRes
@@ -244,7 +245,7 @@ def inpaint(
     schedule: HelmholtzSplitSchedule,
     device: torch.device,
     single_step: bool = True,
-    t_start: int = DEFAULT_T_START,
+    t_start: Optional[int] = None,
     resample_steps: int = DEFAULT_RESAMPLE_STEPS,
     seed: Optional[int] = None,
 ) -> np.ndarray:
@@ -254,13 +255,19 @@ def inpaint(
     and {0,1} for the mask (1 = unobserved). Output is (44, 94, 2) in m/s.
 
     If `single_step=True` (default), runs exactly one UNet forward pass at
-    step `t_start` and returns the direct x0 prediction. This is dramatically
-    faster than the iterative RePaint chain. Set `single_step=False` to use
-    the full iterative reverse chain with `resample_steps` RePaint
-    resamplings per step.
+    step `t_start` (default `DEFAULT_SINGLE_STEP_T=50`) and returns the
+    direct x0 prediction. This is dramatically faster than the iterative
+    RePaint chain.
+
+    If `single_step=False`, runs the iterative reverse chain from `t_start`
+    (default `DEFAULT_T_START=75`) with `resample_steps` RePaint
+    resamplings per step. Defaults match scripts/eval_helmholtz_split.py.
     """
     if seed is not None:
         torch.manual_seed(seed)
+
+    if t_start is None:
+        t_start = DEFAULT_SINGLE_STEP_T if single_step else DEFAULT_T_START
 
     # Pad into the 64×128 UNet working grid.
     # Standardize observed values; unobserved cells stay zero — they're

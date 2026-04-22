@@ -27,7 +27,7 @@ import numpy as np
 import torch
 
 from .config import (
-    DEFAULT_RESAMPLE_STEPS, DEFAULT_T_START, OCEAN_H, OCEAN_W,
+    DEFAULT_RESAMPLE_STEPS, OCEAN_H, OCEAN_W,
 )
 from .inference import (
     inpaint, load_network, make_schedule, resolve_device,
@@ -56,7 +56,7 @@ class DDPM:
         observations: Iterable[Sequence[float]],
         *,
         single_step: bool = True,
-        t_start: int = DEFAULT_T_START,
+        t_start: Optional[int] = None,
         resample_steps: int = DEFAULT_RESAMPLE_STEPS,
         seed: Optional[int] = None,
     ) -> tuple[np.ndarray, np.ndarray]:
@@ -75,11 +75,11 @@ class DDPM:
             return the direct x0 prediction (fast: one network call). If
             False, run the full iterative RePaint reverse chain (slower
             but typically higher quality).
-        t_start : int
-            In single-step mode, the timestep the UNet is queried at
-            (higher = more noise in x_t input, model relies more on
-            observations). In iterative mode, the reverse chain starting
-            step. Default: full chain (N_STEPS-1).
+        t_start : int, optional
+            In single-step mode, the timestep the UNet is queried at.
+            In iterative mode, the reverse chain starting step.
+            If None (default), uses 50 for single-step and 75 for
+            iterative — the settings from scripts/eval_helmholtz_split.py.
         resample_steps : int
             RePaint repaint iterations per timestep (iterative mode only).
         seed : int, optional
@@ -129,7 +129,7 @@ def predict(
     *,
     device: str = "auto",
     single_step: bool = True,
-    t_start: int = DEFAULT_T_START,
+    t_start: Optional[int] = None,
     resample_steps: int = DEFAULT_RESAMPLE_STEPS,
     seed: Optional[int] = None,
 ) -> tuple[np.ndarray, np.ndarray]:
