@@ -134,6 +134,40 @@ def _build_model_input(
     return torch.cat([x_t_in, miss_ch, cond_field], dim=1)
 
 
+def run_single_step(
+    net: MyUNet_Helmholtz_Split_FiLM_MultiRes,
+    schedule: HelmholtzSplitSchedule,
+    known_std: torch.Tensor,
+    miss_mask: torch.Tensor,
+    *,
+    t: int = N_STEPS - 1,
+) -> torch.Tensor:
+    """Single forward pass: one UNet call at step `t`, directly return x0.
+
+    The model was trained with `prediction_target=x0`, so the network
+    output at any timestep is a direct estimate of the clean field.
+    This skips the entire iterative reverse chain — the fastest possible
+    inference path. Quality is lower than full RePaint but still sensible
+    for sparse-obs inpainting because the x0-prediction objective is
+    well-conditioned on the observation channels.
+
+    Returns (1, 2, 64, 128) standardized velocity prediction. The known
+    region is spliced back from the input observations (not the UNet
+    output) so observed cells are exactly preserved.
+    """
+    device = known_std.device
+    known_mask = 1.0 - miss_mask
+    t_b = torch.tensor([t], device=device)
+    x_t, _, _ = schedule.q_sample(known_std, t_b)  # noise at level t
+    t_tensor = torch.full((1, 1), t, device=device, dtype=torch.long)
+    x0_pred = net(
+        _build_model_input(x_t, miss_mask, known_mask, known_std),
+        t_tensor,
+    )
+    # Splice: keep observations exactly, use UNet output elsewhere.
+    return known_std * known_mask + x0_pred * miss_mask
+
+
 def run_repaint(
     net: MyUNet_Helmholtz_Split_FiLM_MultiRes,
     schedule: HelmholtzSplitSchedule,
@@ -209,6 +243,7 @@ def inpaint(
     net: MyUNet_Helmholtz_Split_FiLM_MultiRes,
     schedule: HelmholtzSplitSchedule,
     device: torch.device,
+    single_step: bool = True,
     t_start: int = DEFAULT_T_START,
     resample_steps: int = DEFAULT_RESAMPLE_STEPS,
     seed: Optional[int] = None,
@@ -217,6 +252,12 @@ def inpaint(
 
     Inputs are (44, 94) ocean-region arrays in raw m/s units (velocities)
     and {0,1} for the mask (1 = unobserved). Output is (44, 94, 2) in m/s.
+
+    If `single_step=True` (default), runs exactly one UNet forward pass at
+    step `t_start` and returns the direct x0 prediction. This is dramatically
+    faster than the iterative RePaint chain. Set `single_step=False` to use
+    the full iterative reverse chain with `resample_steps` RePaint
+    resamplings per step.
     """
     if seed is not None:
         torch.manual_seed(seed)
@@ -238,10 +279,15 @@ def inpaint(
     miss_mask_t = torch.from_numpy(miss_full).unsqueeze(0).to(device)
 
     with torch.no_grad():
-        x_final = run_repaint(
-            net, schedule, known_std_t, miss_mask_t,
-            t_start=t_start, resample_steps=resample_steps,
-        )
+        if single_step:
+            x_final = run_single_step(
+                net, schedule, known_std_t, miss_mask_t, t=t_start,
+            )
+        else:
+            x_final = run_repaint(
+                net, schedule, known_std_t, miss_mask_t,
+                t_start=t_start, resample_steps=resample_steps,
+            )
 
     ocean = _crop_full_to_ocean(x_final).squeeze(0).cpu().numpy()  # (2, 44, 94)
     ocean = inverse_standardize(ocean)

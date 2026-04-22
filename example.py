@@ -35,14 +35,9 @@ def main() -> None:
     print(f"DDPM loaded on device: {ddpm.device}")
 
     # Predict the full 44×94 field.
-    # `t_start` controls how many reverse-diffusion steps to take (<= 250).
-    # Lower values = faster but noisier; 250 = full quality.
-    mean, uncertainty = ddpm.predict(
-        observations,
-        t_start=250,
-        resample_steps=3,
-        seed=0,
-    )
+    # Default is single_step=True: one UNet forward pass, ~40 ms on MPS/CUDA.
+    # Set single_step=False for the full iterative RePaint chain.
+    mean, uncertainty = ddpm.predict(observations, seed=0)
     print(f"mean      shape: {mean.shape}, dtype: {mean.dtype}")
     print(f"uncertainty shape: {uncertainty.shape} (currently all zeros)")
     print(f"u range: [{mean[..., 0].min():.3f}, {mean[..., 0].max():.3f}] m/s")

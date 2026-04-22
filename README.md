@@ -131,13 +131,14 @@ many calls for best performance.
 | `device` | `"auto"` | `"auto"` picks CUDA → MPS → CPU. Or pass `"cpu"`, `"cuda"`, `"mps"`, or a `torch.device`. |
 | `weights_path` | `None` | Override the bundled `weights.pt` path. |
 
-### `DDPM.predict(observations, *, t_start=250, resample_steps=3, seed=None) -> (mean, uncertainty)`
+### `DDPM.predict(observations, *, single_step=True, t_start=249, resample_steps=3, seed=None) -> (mean, uncertainty)`
 
 | Argument | Default | Description |
 | --- | --- | --- |
 | `observations` | *required* | Iterable of `(lat, lon, unix_time, u, v)` tuples. Co-located obs are averaged. |
-| `t_start` | `250` | Reverse-diffusion starting step (1–250). Lower = faster but noisier. |
-| `resample_steps` | `3` | RePaint resample count per step (higher = better blending with observations). |
+| `single_step` | `True` | If `True`, run exactly one UNet forward pass and return the direct `x0` estimate (fast, ~40 ms on MPS/CUDA). If `False`, run the full iterative RePaint chain. |
+| `t_start` | `249` | Single-step mode: the timestep the UNet is queried at (higher ⇒ more noise in the `x_t` input, model leans harder on observations). Iterative mode: reverse-chain starting step. |
+| `resample_steps` | `3` | RePaint resample count per step (iterative mode only). |
 | `seed` | `None` | If set, uses a deterministic noise RNG. |
 
 Returns:
@@ -221,11 +222,19 @@ lazy singleton, but you give up explicit control of the device.
 
 ### Speed vs. quality trade-off
 
-- `t_start=250, resample_steps=3` (defaults) — full quality, best blending
-  with observations. ~5 s on CUDA, ~60 s on CPU.
-- `t_start=100, resample_steps=1` — ~3× faster, slightly noisier.
-- `t_start=25, resample_steps=1` — good for smoke-testing integration; do
-  not use for real predictions.
+**Default is `single_step=True`**: one UNet forward pass, returns the
+direct x0 estimate. On MPS/CUDA this is ~40 ms per call. Observations are
+preserved exactly at their cells; everything else is filled in by the
+model.
+
+If you want the full iterative RePaint chain (slower, can produce
+smoother fields in some regimes), pass `single_step=False`:
+
+| Mode | Speed (MPS) | Notes |
+| --- | --- | --- |
+| `single_step=True` *(default)* | ~40 ms | Best for planners — one network call. |
+| `single_step=False, t_start=249, resample_steps=3` | ~30 s | Full RePaint quality. |
+| `single_step=False, t_start=100, resample_steps=1` | ~5 s | Reasonable middle ground. |
 
 ### Reproducibility
 
@@ -316,5 +325,9 @@ index). Two observations at the same grid cell get averaged.
 
 ## Changelog
 
+- **0.2.0** — Single-step inference is now the default (`single_step=True`).
+  One UNet forward pass instead of the full 250-step RePaint chain —
+  ~800× faster (~40 ms on MPS/CUDA). Pass `single_step=False` to get the
+  old iterative behaviour.
 - **0.1.0** — Initial release. Split-head Helmholtz multi-res model, no-
   bathymetry Rams Head checkpoint. Uncertainty stub.

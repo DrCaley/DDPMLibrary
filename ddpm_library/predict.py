@@ -55,6 +55,7 @@ class DDPM:
         self,
         observations: Iterable[Sequence[float]],
         *,
+        single_step: bool = True,
         t_start: int = DEFAULT_T_START,
         resample_steps: int = DEFAULT_RESAMPLE_STEPS,
         seed: Optional[int] = None,
@@ -69,10 +70,18 @@ class DDPM:
             unix_t : seconds since the Unix epoch. Accepted but ignored —
                 the model is not time-conditioned.
             u, v : velocity components in m/s.
+        single_step : bool, default True
+            If True, run a single UNet forward pass at step `t_start` and
+            return the direct x0 prediction (fast: one network call). If
+            False, run the full iterative RePaint reverse chain (slower
+            but typically higher quality).
         t_start : int
-            DDPM step to start the reverse chain from (default: full chain).
+            In single-step mode, the timestep the UNet is queried at
+            (higher = more noise in x_t input, model relies more on
+            observations). In iterative mode, the reverse chain starting
+            step. Default: full chain (N_STEPS-1).
         resample_steps : int
-            RePaint repaint iterations per timestep (default 3).
+            RePaint repaint iterations per timestep (iterative mode only).
         seed : int, optional
             Seed for the diffusion noise. None → non-deterministic.
 
@@ -103,6 +112,7 @@ class DDPM:
         mean = inpaint(
             sparse_u, sparse_v, missing_mask,
             net=self.net, schedule=self.schedule, device=self.device,
+            single_step=single_step,
             t_start=t_start, resample_steps=resample_steps, seed=seed,
         )
         uncertainty = np.zeros_like(mean)
@@ -118,6 +128,7 @@ def predict(
     observations: Iterable[Sequence[float]],
     *,
     device: str = "auto",
+    single_step: bool = True,
     t_start: int = DEFAULT_T_START,
     resample_steps: int = DEFAULT_RESAMPLE_STEPS,
     seed: Optional[int] = None,
@@ -129,5 +140,7 @@ def predict(
     ):
         _default_instance = DDPM(device=device)
     return _default_instance.predict(
-        observations, t_start=t_start, resample_steps=resample_steps, seed=seed,
+        observations,
+        single_step=single_step,
+        t_start=t_start, resample_steps=resample_steps, seed=seed,
     )
