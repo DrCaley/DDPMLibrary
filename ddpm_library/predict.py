@@ -58,6 +58,7 @@ class DDPM:
         single_step: bool = True,
         t_start: Optional[int] = None,
         resample_steps: int = DEFAULT_RESAMPLE_STEPS,
+        voronoi: bool = True,
         seed: Optional[int] = None,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Predict the full velocity field from scattered observations.
@@ -113,7 +114,8 @@ class DDPM:
             sparse_u, sparse_v, missing_mask,
             net=self.net, schedule=self.schedule, device=self.device,
             single_step=single_step,
-            t_start=t_start, resample_steps=resample_steps, seed=seed,
+            t_start=t_start, resample_steps=resample_steps,
+            voronoi=voronoi, seed=seed,
         )
         uncertainty = np.zeros_like(mean)
         return mean, uncertainty
@@ -131,6 +133,7 @@ def predict(
     single_step: bool = True,
     t_start: Optional[int] = None,
     resample_steps: int = DEFAULT_RESAMPLE_STEPS,
+    voronoi: bool = True,
     seed: Optional[int] = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Stateless wrapper around DDPM.predict. Lazy-loads the model on first call."""
@@ -142,5 +145,6 @@ def predict(
     return _default_instance.predict(
         observations,
         single_step=single_step,
-        t_start=t_start, resample_steps=resample_steps, seed=seed,
+        t_start=t_start, resample_steps=resample_steps,
+        voronoi=voronoi, seed=seed,
     )

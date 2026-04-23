@@ -177,7 +177,7 @@ def score(pred: np.ndarray, gt: np.ndarray, ocean_mask: np.ndarray) -> dict:
 
 
 def compare(algo: str, frame_idx: int, pct: float, seed: int,
-            ddpm_model: DDPM) -> None:
+            ddpm_model: DDPM, vcnn_model) -> None:
     print(f"\n=== algo={algo}  frame={frame_idx}  coverage={pct}%  seed={seed} ===")
     t0 = time.time()
     gt, ocean_mask, obs_mask, pred_research = research_eval_frame(
@@ -189,6 +189,14 @@ def compare(algo: str, frame_idx: int, pct: float, seed: int,
         gt, ocean_mask, obs_mask, seed, algo, ddpm_model)
     t_library = time.time() - t0
 
+    # V-CNN baseline (same frame/obs)
+    vel_obs = gt * obs_mask[None]
+    t0 = time.time()
+    pred_vcnn = ehs.predict_vcnn(
+        vcnn_model, vel_obs, obs_mask, ocean_mask, torch.device("cpu")
+    )
+    t_vcnn = time.time() - t0
+
     # pixel-level diff (on ocean cells only)
     diff = (pred_research - pred_library) * ocean_mask[None]
     mask_sum = ocean_mask.sum() * 2
@@ -197,6 +205,7 @@ def compare(algo: str, frame_idx: int, pct: float, seed: int,
 
     s_research = score(pred_research, gt, ocean_mask)
     s_library = score(pred_library, gt, ocean_mask)
+    s_vcnn = score(pred_vcnn, gt, ocean_mask)
 
     n_obs = int(obs_mask.sum())
     n_ocean = int(ocean_mask.sum())
@@ -205,6 +214,11 @@ def compare(algo: str, frame_idx: int, pct: float, seed: int,
           f"({t_research*1000:.0f} ms)")
     print(f"  DDPMLibrary   : MSE={s_library['mse']:.6f}  RMSE={s_library['rmse']:.4f} m/s   "
           f"({t_library*1000:.0f} ms)")
+    print(f"  V-CNN baseline: MSE={s_vcnn['mse']:.6f}  RMSE={s_vcnn['rmse']:.4f} m/s   "
+          f"({t_vcnn*1000:.0f} ms)")
+    ratio = s_library["rmse"] / s_vcnn["rmse"]
+    print(f"  → DDPMLibrary / V-CNN  RMSE ratio: {ratio:.2f}×  "
+          f"({'better' if ratio < 1 else 'worse'} than V-CNN)")
     print(f"  |research - library|   mean={mean_abs:.2e}  max={max_abs:.2e}  (m/s)")
     # flag equivalence
     if max_abs < 1e-5:
@@ -222,12 +236,16 @@ def main() -> None:
     print(f"  device: {ddpm_model.device}")
     print(f"  weights: {WEIGHTS_PATH}")
 
+    print(f"Loading V-CNN baseline ...")
+    vcnn_model = ehs.load_vcnn(torch.device("cpu"))
+    print(f"  loaded")
+
     # Sweep 3 coverages × 2 algorithms on a single test frame.
     frame_idx = 15000  # arbitrary late-range frame
     seed = 42
     for algo in ("single", "iterative"):
         for pct in (0.5, 1.0, 2.0):
-            compare(algo, frame_idx, pct, seed, ddpm_model)
+            compare(algo, frame_idx, pct, seed, ddpm_model, vcnn_model)
 
 
 if __name__ == "__main__":

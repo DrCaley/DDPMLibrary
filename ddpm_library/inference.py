@@ -115,6 +115,36 @@ def _crop_full_to_ocean(arr: torch.Tensor) -> torch.Tensor:
     return arr[..., :OCEAN_H, :OCEAN_W]
 
 
+def _voronoi_fill_2ch(
+    known_std: torch.Tensor, known_mask: torch.Tensor,
+) -> torch.Tensor:
+    """Nearest-neighbour (Voronoi) fill of sparse observations.
+
+    Matches scripts/eval_helmholtz_split.py::voronoi_fill, restricted to
+    the OCEAN_H×OCEAN_W ocean region. Used as the dense base field that
+    is forward-noised by `q_sample` so that at moderate t the network
+    sees a signal everywhere, not just at the <1% of observed cells.
+    """
+    from scipy.spatial import cKDTree
+
+    B, C, H, W = known_std.shape
+    assert B == 1 and C == 2
+    km = known_mask[0, 0, :OCEAN_H, :OCEAN_W].detach().cpu().numpy()
+    ky, kx = np.where(km > 0.5)
+    out = torch.zeros_like(known_std)
+    if len(ky) == 0:
+        return out
+    u = known_std[0, 0, :OCEAN_H, :OCEAN_W].detach().cpu().numpy()
+    v = known_std[0, 1, :OCEAN_H, :OCEAN_W].detach().cpu().numpy()
+    tree = cKDTree(np.stack([ky, kx], axis=1).astype(np.float64))
+    gy, gx = np.mgrid[0:OCEAN_H, 0:OCEAN_W]
+    _, idx = tree.query(np.stack([gy.ravel(), gx.ravel()], axis=1).astype(np.float64))
+    idx = idx.reshape(OCEAN_H, OCEAN_W)
+    filled = np.stack([u[ky, kx][idx], v[ky, kx][idx]], axis=0)
+    out[0, :, :OCEAN_H, :OCEAN_W] = torch.from_numpy(filled).to(known_std)
+    return out
+
+
 def _build_model_input(
     x_t: torch.Tensor,
     miss_mask: torch.Tensor,
@@ -142,6 +172,7 @@ def run_single_step(
     miss_mask: torch.Tensor,
     *,
     t: int = N_STEPS - 1,
+    voronoi: bool = False,
 ) -> torch.Tensor:
     """Single forward pass: one UNet call at step `t`, directly return x0.
 
@@ -158,8 +189,13 @@ def run_single_step(
     """
     device = known_std.device
     known_mask = 1.0 - miss_mask
+    if voronoi:
+        vor_std = _voronoi_fill_2ch(known_std, known_mask)
+        base = known_std * known_mask + vor_std * miss_mask
+    else:
+        base = known_std
     t_b = torch.tensor([t], device=device)
-    x_t, _, _ = schedule.q_sample(known_std, t_b)  # noise at level t
+    x_t, _, _ = schedule.q_sample(base, t_b)
     t_tensor = torch.full((1, 1), t, device=device, dtype=torch.long)
     x0_pred = net(
         _build_model_input(x_t, miss_mask, known_mask, known_std),
@@ -177,6 +213,7 @@ def run_repaint(
     *,
     t_start: int = DEFAULT_T_START,
     resample_steps: int = DEFAULT_RESAMPLE_STEPS,
+    voronoi: bool = False,
 ) -> torch.Tensor:
     """RePaint-style reverse diffusion in standardized space.
 
@@ -196,9 +233,14 @@ def run_repaint(
     """
     device = known_std.device
     known_mask = 1.0 - miss_mask
+    if voronoi:
+        vor_std = _voronoi_fill_2ch(known_std, known_mask)
+        base = known_std * known_mask + vor_std * miss_mask
+    else:
+        base = known_std
 
     t0 = torch.tensor([t_start], device=device)
-    x, _, _ = schedule.q_sample(known_std, t0)
+    x, _, _ = schedule.q_sample(base, t0)
 
     for t in range(t_start, -1, -1):
         n_resample = resample_steps if t > 0 else 1
@@ -247,6 +289,7 @@ def inpaint(
     single_step: bool = True,
     t_start: Optional[int] = None,
     resample_steps: int = DEFAULT_RESAMPLE_STEPS,
+    voronoi: bool = False,
     seed: Optional[int] = None,
 ) -> np.ndarray:
     """Run one inference sample.
@@ -289,11 +332,13 @@ def inpaint(
         if single_step:
             x_final = run_single_step(
                 net, schedule, known_std_t, miss_mask_t, t=t_start,
+                voronoi=voronoi,
             )
         else:
             x_final = run_repaint(
                 net, schedule, known_std_t, miss_mask_t,
                 t_start=t_start, resample_steps=resample_steps,
+                voronoi=voronoi,
             )
 
     ocean = _crop_full_to_ocean(x_final).squeeze(0).cpu().numpy()  # (2, 44, 94)
