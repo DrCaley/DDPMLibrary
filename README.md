@@ -1,10 +1,10 @@
 # DDPMLibrary
 
 Inference-only Python library for ocean-surface-velocity inpainting with a
-denoising-diffusion model (DDPM). Drop the folder into your project, `import
-ddpm_library`, and call `predict` on a list of sparse `(lat, lon, unix_time,
-u, v)` observations to get back a dense velocity field over the St. John Rams
-Head domain.
+denoising-diffusion model (DDPM). Install it with `pip`, `import ddpm_library`,
+and call `predict` on a list of sparse `(lat, lon, unix_time, u, v)`
+observations to get back a dense velocity field over the St. John Rams Head
+domain.
 
 This library wraps the best "split-head" Helmholtz-decomposition model from
 our research repo, trained on the small single-location (Rams Head) dataset
@@ -60,7 +60,7 @@ sudo apt install git-lfs
 git lfs install
 ```
 
-If you skip this step, `ddpm_library/assets/weights.pt` will clone as a
+If you skip this step, `assets/weights.pt` will clone as a
 ~130-byte pointer file and model loading will fail with an `unpickling`
 error.
 
@@ -74,24 +74,30 @@ cd DDPMLibrary
 Verify the weights downloaded correctly:
 
 ```bash
-ls -lh ddpm_library/assets/weights.pt   # should be ~110M, not ~130B
+ls -lh assets/weights.pt   # should be ~110M, not ~130B
 ```
 
 If it looks like a pointer file, run `git lfs pull` to fetch the real bytes.
 
-### 3. Install Python dependencies
+### 3. Install the package
 
 ```bash
-pip install -r requirements.txt
+pip install .
 ```
 
 We recommend doing this in a fresh virtual environment (`python -m venv
 .venv && source .venv/bin/activate`).
 
+For editable development installs:
+
+```bash
+pip install -e ".[dev]"
+```
+
 ### 4. Smoke-test the install
 
 ```bash
-python example.py
+python scripts/example.py
 ```
 
 You should see a device announcement (`cuda`, `mps`, or `cpu`) and a
@@ -99,18 +105,6 @@ printed `mean` shape of `(44, 94, 2)`. On CPU this takes ~1 minute with
 `t_start=250`; on CUDA/MPS it's a few seconds.
 
 ### 5. Use it from your own project
-
-You have two options:
-
-**Option A — add DDPMLibrary to your `PYTHONPATH`**
-```bash
-export PYTHONPATH="/absolute/path/to/DDPMLibrary:$PYTHONPATH"
-```
-
-**Option B — copy the folder into your project**
-```bash
-cp -r /path/to/DDPMLibrary/ddpm_library /path/to/your_project/
-```
 
 Then just:
 ```python
@@ -269,20 +263,23 @@ m2, _ = ddpm.predict(obs, seed=42)
 
 ```
 DDPMLibrary/
-├── ddpm_library/
-│   ├── __init__.py           # exports DDPM, predict
-│   ├── predict.py            # public API
-│   ├── inference.py          # reverse-diffusion loop
-│   ├── geo.py                # lat/lon ↔ grid-index
-│   ├── rasterize.py          # obs list → sparse channels
-│   ├── standardize.py        # z-score helpers
-│   ├── config.py             # bounding box, grid, checkpoint metadata
-│   ├── model/                # vendored UNet + schedule (no research-repo deps)
-│   └── assets/
-│       ├── weights.pt        # ~110 MB, tracked with git-lfs
-│       └── lat_lon_grid.npz  # native grid coordinates
+├── assets/
+│   ├── weights.pt            # ~110 MB, tracked with git-lfs
+│   └── lat_lon_grid.npz      # native grid coordinates
+├── src/
+│   └── ddpm_library/
+│       ├── __init__.py       # exports DDPM, predict
+│       ├── predict.py        # public API
+│       ├── inference.py      # reverse-diffusion loop
+│       ├── geo.py            # lat/lon ↔ grid-index
+│       ├── rasterize.py      # obs list → sparse channels
+│       ├── standardize.py    # z-score helpers
+│       ├── config.py         # bounding box, grid, checkpoint metadata
+│       └── model/            # vendored UNet + schedule (no research-repo deps)
 ├── tests/
-├── example.py
+├── scripts/
+│   └── example.py
+├── pyproject.toml
 ├── requirements.txt
 └── README.md
 ```
@@ -300,7 +297,7 @@ MIT. See `LICENSE`.
 **`UnpicklingError` / `RuntimeError: PytorchStreamReader failed`** when
 constructing `DDPM()`.
 → `weights.pt` is still a Git LFS pointer. Run `git lfs install && git lfs
-pull` in the repo root, then `ls -lh ddpm_library/assets/weights.pt` — the
+pull` in the repo root, then `ls -lh assets/weights.pt` — the
 file should be ~110 MB.
 
 **`ValueError: Observation (lat, lon) is outside the model's covered region`**
