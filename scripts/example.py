@@ -5,9 +5,6 @@ import numpy as np
 from ddpm_library import DDPM
 from ddpm_library.geo import grid_arrays
 
-from pathlib import Path
-
-pkg_path = Path(__file__).parents[1]
 
 def main() -> None:
     # Get the native lat/lon grid so we can place observations on valid nodes
@@ -34,7 +31,7 @@ def main() -> None:
 
     # Load the model. The first call downloads nothing — weights are bundled.
     # device="auto" picks CUDA > MPS > CPU.
-    ddpm = DDPM(device="auto", weights_path=pkg_path / 'assets' / 'weights.pt')
+    ddpm = DDPM(device="auto")
     print(f"DDPM loaded on device: {ddpm.device}")
 
     # Predict the full 44×94 field.

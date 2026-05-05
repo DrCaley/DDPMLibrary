@@ -33,8 +33,8 @@ LON_MIN = -64.724759611195822
 LON_MAX = -64.680048072672093
 
 # ── Asset paths ───────────────────────────────────────────────────────
-PKG_PATH = Path(__file__).parents[2]
-_ASSETS_DIR = PKG_PATH / "assets"
+# Assets live inside the package so they are bundled by pip / wheel.
+_ASSETS_DIR = Path(__file__).parent / "assets"
 WEIGHTS_PATH = _ASSETS_DIR / "weights.pt"
 LAT_LON_GRID_PATH = _ASSETS_DIR / "lat_lon_grid.npz"
 
