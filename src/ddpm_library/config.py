@@ -36,6 +36,7 @@ LON_MAX = -64.680048072672093
 # Assets live inside the package so they are bundled by pip / wheel.
 _ASSETS_DIR = Path(__file__).parent / "assets"
 WEIGHTS_PATH = _ASSETS_DIR / "weights.pt"
+VCNN_WEIGHTS_PATH = _ASSETS_DIR / "vcnn_weights.pt"
 LAT_LON_GRID_PATH = _ASSETS_DIR / "lat_lon_grid.npz"
 
 # ── Default inference parameters (match scripts/eval_helmholtz_split.py) ─

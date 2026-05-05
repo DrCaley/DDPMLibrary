@@ -38,7 +38,22 @@ from ddpm_library import predict
 mean, uncertainty = predict(observations)
 ```
 
-See `example.py` for a complete runnable example.
+### V-CNN baseline
+
+A Voronoi-CNN baseline (Fukami et al. 2021) is also bundled as a faster,
+deterministic alternative. Same `predict([(lat, lon, unix_t, u, v), ...])`
+contract:
+
+```python
+from ddpm_library import VCNN
+
+vcnn = VCNN(device="auto")
+mean, _ = vcnn.predict(observations)   # one forward pass, no diffusion
+```
+
+Or stateless: `from ddpm_library import predict_vcnn`.
+
+See `scripts/example.py` for a complete runnable example showing both.
 
 ---
 

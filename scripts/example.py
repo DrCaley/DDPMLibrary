@@ -1,8 +1,17 @@
-"""Example usage of DDPMLibrary."""
+"""Example usage of DDPMLibrary.
+
+Demonstrates both predictors:
+
+* ``DDPM``  — split-head diffusion model (more accurate, slower).
+* ``VCNN``  — Voronoi-CNN baseline (Fukami et al. 2021), single forward
+  pass; a fast deterministic alternative.
+
+Both share the same ``predict([(lat, lon, unix_t, u, v), ...])`` API.
+"""
 
 import numpy as np
 
-from ddpm_library import DDPM
+from ddpm_library import DDPM, VCNN
 from ddpm_library.geo import grid_arrays
 
 
@@ -29,6 +38,7 @@ def main() -> None:
             float(rng.normal(0.0, 0.1)),   # v (m/s)
         ))
 
+    # ── DDPM (diffusion) ────────────────────────────────────────────
     # Load the model. The first call downloads nothing — weights are bundled.
     # device="auto" picks CUDA > MPS > CPU.
     ddpm = DDPM(device="auto")
@@ -38,10 +48,21 @@ def main() -> None:
     # Default is single_step=True: one UNet forward pass, ~40 ms on MPS/CUDA.
     # Set single_step=False for the full iterative RePaint chain.
     mean, uncertainty = ddpm.predict(observations, seed=0)
-    print(f"mean      shape: {mean.shape}, dtype: {mean.dtype}")
-    print(f"uncertainty shape: {uncertainty.shape} (currently all zeros)")
-    print(f"u range: [{mean[..., 0].min():.3f}, {mean[..., 0].max():.3f}] m/s")
-    print(f"v range: [{mean[..., 1].min():.3f}, {mean[..., 1].max():.3f}] m/s")
+    print(f"[DDPM]  mean shape: {mean.shape}, dtype: {mean.dtype}")
+    print(f"[DDPM]  u range: [{mean[..., 0].min():.3f}, "
+          f"{mean[..., 0].max():.3f}] m/s")
+    print(f"[DDPM]  v range: [{mean[..., 1].min():.3f}, "
+          f"{mean[..., 1].max():.3f}] m/s")
+
+    # ── V-CNN (deterministic baseline) ──────────────────────────────
+    vcnn = VCNN(device="auto")
+    print(f"V-CNN loaded on device: {vcnn.device}")
+    mean_v, _ = vcnn.predict(observations)
+    print(f"[VCNN]  mean shape: {mean_v.shape}, dtype: {mean_v.dtype}")
+    print(f"[VCNN]  u range: [{mean_v[..., 0].min():.3f}, "
+          f"{mean_v[..., 0].max():.3f}] m/s")
+    print(f"[VCNN]  v range: [{mean_v[..., 1].min():.3f}, "
+          f"{mean_v[..., 1].max():.3f}] m/s")
 
 
 if __name__ == "__main__":
