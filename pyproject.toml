@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ddpm-library"
+version = "0.2.0"
+description = "Inference-only ocean velocity inpainting library built around a split-head DDPM."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [
+  { name = "DDPMLibrary contributors" }
+]
+dependencies = [
+  "numpy",
+  "scipy",
+  "torch>=2.0",
+]
+keywords = [
+  "ddpm",
+  "diffusion",
+  "oceanography",
+  "pytorch",
+]
+classifiers = [
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+]
+
+[tool.setuptools]
+include-package-data = true
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["ddpm_library*"]
+
+[tool.setuptools.package-data]
+ddpm_library = ["assets/*.pt", "assets/*.npz"]

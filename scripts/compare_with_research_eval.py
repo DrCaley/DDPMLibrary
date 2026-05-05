@@ -2,7 +2,7 @@
 `scripts/eval_helmholtz_split.py` on the same checkpoint.
 
 Both paths:
-  - Load the SAME weights (ddpm_library/assets/weights.pt, which is a copy
+  - Load the SAME weights (assets/weights.pt, which is a copy
     of experiments/12_helmholtz_dual_head/multires_splitnoise/results/
     inpaint_gaussian_t250_best_ema_weights.pt).
   - Build the SAME observation mask from a fixed seed.
