@@ -2,20 +2,23 @@
 
 Two predictors are provided:
 
-* :class:`DDPM` — split-head diffusion model (more accurate, slower).
-* :class:`VCNN` — Voronoi-CNN baseline (Fukami et al. 2021): faster and
-  often a better starting point for very sparse observation regimes.
+* :class:`VCNN` — Voronoi-CNN baseline (Fukami et al. 2021). Single CNN
+  forward pass; currently the more accurate of the two on this dataset
+  and the recommended default.
+* :class:`DDPM` — split-head diffusion model. Generative; can produce
+  multiple plausible samples per call but has higher RMSE than V-CNN
+  in our benchmarks.
 
 Both share the same ``predict([(lat, lon, unix_t, u, v), ...])`` API.
 
 Example
 -------
-    from ddpm_library import DDPM, VCNN
+    from ddpm_library import VCNN, DDPM
 
     obs = [(18.305, -64.710, 1_700_000_000.0, 0.12, -0.03), ...]
 
+    mean, _ = VCNN(device="auto").predict(obs)   # baseline (recommended)
     mean, _ = DDPM(device="auto").predict(obs)   # diffusion
-    mean, _ = VCNN(device="auto").predict(obs)   # baseline
 
 See README.md for details.
 """

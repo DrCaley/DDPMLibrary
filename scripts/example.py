@@ -2,9 +2,11 @@
 
 Demonstrates both predictors:
 
-* ``DDPM``  — split-head diffusion model (more accurate, slower).
-* ``VCNN``  — Voronoi-CNN baseline (Fukami et al. 2021), single forward
-  pass; a fast deterministic alternative.
+* ``VCNN``  — Voronoi-CNN baseline (Fukami et al. 2021), a single CNN
+  forward pass. Currently the more accurate of the two on this dataset.
+* ``DDPM``  — split-head diffusion model. Generative; can produce
+  multiple plausible samples per call but has higher RMSE than V-CNN
+  in our benchmarks.
 
 Both share the same ``predict([(lat, lon, unix_t, u, v), ...])`` API.
 """

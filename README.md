@@ -38,11 +38,13 @@ from ddpm_library import predict
 mean, uncertainty = predict(observations)
 ```
 
-### V-CNN baseline
+### V-CNN baseline (recommended)
 
-A Voronoi-CNN baseline (Fukami et al. 2021) is also bundled as a faster,
-deterministic alternative. Same `predict([(lat, lon, unix_t, u, v), ...])`
-contract:
+A Voronoi-CNN baseline (Fukami et al. 2021) is also bundled. Despite the
+"baseline" framing it is currently **more accurate** than the diffusion
+model on this dataset (lower RMSE in our benchmarks), and faster — a
+single CNN forward pass with no iterative sampling. Same
+`predict([(lat, lon, unix_t, u, v), ...])` contract:
 
 ```python
 from ddpm_library import VCNN
