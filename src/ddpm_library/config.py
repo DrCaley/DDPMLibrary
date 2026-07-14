@@ -6,6 +6,7 @@ trained on the St. John Rams Head "northwest" single-location dataset
 (5-channel input, no bathymetry).
 """
 
+import os
 from pathlib import Path
 
 # ── Grid ──────────────────────────────────────────────────────────────
@@ -46,3 +47,49 @@ DEFAULT_SINGLE_STEP_T = 50
 # Iterative RePaint: partial reverse chain with 3 re-samplings per step.
 DEFAULT_T_START = 75
 DEFAULT_RESAMPLE_STEPS = 3
+
+
+# ===========================================================================
+# Stream-function pipeline (the research "best" model — conditional stream-fn
+# DDPM direction x heteroscedastic-magnitude UNet, coupled fuse).
+# Additive: does NOT affect the DDPM / VCNN predictors above.
+# ===========================================================================
+
+# Assets (bundled via git-LFS like the other *.pt weights).
+STREAM_DIR_WEIGHTS_PATH = _ASSETS_DIR / "stream_dir_weights.pt"   # diffusion direction
+STREAM_MAG_WEIGHTS_PATH = _ASSETS_DIR / "stream_mag_weights.pt"   # hetero magnitude
+STREAM_GRID_PATH = _ASSETS_DIR / "stream_grid.npz"               # land_mask + stats
+
+# Full hourly dataset (conditioned-priors chrono pickle) — used ONLY by the
+# eval/uncertainty-map scripts (to build temporal priors + empirical neighbours),
+# NEVER by predict(). It is large (~540 MB) and is deliberately NOT bundled with
+# the library. Point to it with the STREAM_DATASET environment variable, or pass
+# --pickle to the script. None here means "not configured".
+STREAM_DATASET_PATH = (
+    Path(os.environ["STREAM_DATASET"]) if os.environ.get("STREAM_DATASET") else None
+)
+
+# Native model grid orientation (transpose of the library's lat x lon grid):
+#   library grid is (lat=44, lon=94); the stream model works in (94, 44).
+STREAM_H, STREAM_W = 94, 44
+
+# Checkpoint architecture / diffusion config (from StreamFn_Cond_x0_mag_spread.pt).
+STREAM_COND_CH = 10          # legacy: 3 obs + 4 priors (lags 13,25) + 3 geom
+STREAM_LAGS = (13, 25)       # temporal-prior lags, in hours/frames
+STREAM_PRED_TYPE = "x0_streamfn_cond"
+STREAM_BASE_CH = 64
+STREAM_TIME_DIM = 256
+STREAM_T = 1000
+STREAM_SCHEDULE = "cosine"
+STREAM_NOISE_TYPE = "div_free"
+
+# Default sampler. "dpmpp" = DPM-Solver++(2M): on this model it beats the DDPM
+# ancestral sampler on every calibration/accuracy metric AND is ~24x faster
+# (validated head-to-head). "ddpm" = the classic ancestral sampler (bit-exact
+# to the research pipeline) — kept available for reproducing published numbers.
+STREAM_SAMPLER = "dpmpp"
+STREAM_DPMPP_STEPS = 6            # sweet spot: peak calibration, diverse draws
+STREAM_DDPM_STEPS = 100          # the proven ancestral config
+STREAM_DEFAULT_N_DRAWS = 1   # 1 -> single field (uncertainty zeros, like DDPM/VCNN);
+                             # >1 -> real ensemble spread in the uncertainty output.
+STREAM_UNCERTAINTY_N_DRAWS = 40   # used by the uncertainty-map scripts

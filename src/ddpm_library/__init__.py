@@ -25,6 +25,10 @@ See README.md for details.
 
 from .predict import DDPM, predict
 from .vcnn_predict import VCNN, predict_vcnn
+from .stream_predict import StreamDDPM, predict_stream
 
-__all__ = ["DDPM", "VCNN", "predict", "predict_vcnn"]
-__version__ = "0.3.0"
+__all__ = [
+    "DDPM", "VCNN", "StreamDDPM",
+    "predict", "predict_vcnn", "predict_stream",
+]
+__version__ = "0.4.0"
