@@ -128,7 +128,24 @@ class StreamDDPM:
         (self._het_net, self._hsm, self._hss,
          self._het_clip) = load_hetero_magnitude_model(mag_path, self.device)
 
+        self._vcnn = None   # lazy — only built if full_field=True is used
+
     # ------------------------------------------------------------------
+
+    def _divergent_from_vcnn(self, observations) -> np.ndarray:
+        """Curl-free (divergent) component of a VCNN prediction, model grid.
+
+        Returns (2, 94, 44) m/s: VCNN field minus its divergence-free part.
+        """
+        if self._vcnn is None:
+            from .vcnn_predict import VCNN
+            self._vcnn = VCNN(device=str(self.device))
+        v_lib, _ = self._vcnn.predict(observations)          # (44,94,2) m/s
+        v_model = _lib2model_field(v_lib)                    # (2,94,44)
+        v_divfree = helmholtz_project(v_model, self.ocean_np, max_iters=30, tol=1e-7)
+        v_div = (v_model - v_divfree).astype(np.float32)
+        v_div[:, self.land_np] = 0.0
+        return v_div
 
     @property
     def ocean_mask(self) -> np.ndarray:
@@ -195,6 +212,7 @@ class StreamDDPM:
         inference_steps: Optional[int] = None,
         seed: int = 0,
         project_priors: bool = True,
+        full_field: bool = False,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Predict the full velocity field from scattered observations + priors.
 
@@ -221,6 +239,13 @@ class StreamDDPM:
             matching how the training data was built. Keep on for real-world
             (not-quite-div-free) priors; the field the model outputs is
             divergence-free regardless of this flag.
+        full_field : bool, default False
+            If True, add back the irrotational (divergent) component the
+            stream-function model cannot represent, via Helmholtz recombination:
+            the divergence-free field from this model + the curl-free part
+            extracted from a VCNN prediction. Improves accuracy against the raw
+            (non-div-free) ROMS field while keeping this model's ensemble
+            uncertainty. Off by default (the pure model is exactly divergence-free).
 
         Returns
         -------
@@ -282,6 +307,14 @@ class StreamDDPM:
         mean_model[:, self.land_np] = 0.0
         unc_model[:, self.land_np] = 0.0
 
+        if full_field:
+            # Helmholtz recombination: our (divergence-free) field + the
+            # curl-free/divergent component the stream function cannot produce,
+            # taken from a VCNN prediction. Deterministic addition, so it shifts
+            # the mean but leaves the ensemble uncertainty unchanged.
+            mean_model = mean_model + self._divergent_from_vcnn(obs_list)
+            mean_model[:, self.land_np] = 0.0
+
         mean = _model2lib_field(mean_model).astype(np.float32)      # (44,94,2)
         uncertainty = _model2lib_field(unc_model).astype(np.float32)
         return mean, uncertainty
@@ -302,6 +335,7 @@ def predict_stream(
     inference_steps: Optional[int] = None,
     seed: int = 0,
     project_priors: bool = True,
+    full_field: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Stateless wrapper around :meth:`StreamDDPM.predict` (lazy singleton)."""
     global _default_instance
@@ -312,4 +346,4 @@ def predict_stream(
     return _default_instance.predict(
         observations, priors, n_draws=n_draws, sampler=sampler,
         inference_steps=inference_steps, seed=seed,
-        project_priors=project_priors)
+        project_priors=project_priors, full_field=full_field)

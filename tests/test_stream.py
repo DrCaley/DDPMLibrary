@@ -103,6 +103,18 @@ def test_stream_invalid_sampler_raises(stream):
         stream.predict(_obs(), _priors(), sampler="nope")
 
 
+def test_stream_full_field_adds_divergent(stream):
+    """full_field=True changes the mean (adds VCNN's divergent part), same shape."""
+    obs, pri = _obs(), _priors()
+    m_off, u_off = stream.predict(obs, pri, n_draws=2, inference_steps=5, seed=1)
+    m_on, u_on = stream.predict(obs, pri, n_draws=2, inference_steps=5, seed=1,
+                                full_field=True)
+    assert m_on.shape == (44, 94, 2)
+    assert np.isfinite(m_on).all()
+    assert not np.allclose(m_on, m_off)              # divergent part was added
+    np.testing.assert_allclose(u_on, u_off)          # uncertainty unchanged
+
+
 def test_stream_project_priors_flag_changes_input(stream):
     """project_priors should change the result for a non-div-free prior."""
     rng = np.random.default_rng(2)
