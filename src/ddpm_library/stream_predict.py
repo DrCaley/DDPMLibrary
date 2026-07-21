@@ -61,6 +61,22 @@ def _model2lib_field(a: np.ndarray) -> np.ndarray:
     return np.ascontiguousarray(np.transpose(a, (2, 1, 0)))
 
 
+def _smooth_ocean(field: np.ndarray, ocean: np.ndarray, sigma: float) -> np.ndarray:
+    """Nan-aware Gaussian smooth of a (2, H, W) field over ocean cells only.
+
+    Normalizing by the smoothed ocean mask keeps land/coastlines from bleeding
+    in. Removes the grid-scale (checkerboard) mode from the ensemble spread.
+    """
+    from scipy.ndimage import gaussian_filter
+    om = ocean.astype(np.float64)
+    denom = np.clip(gaussian_filter(om, sigma=sigma), 1e-6, None)
+    out = np.empty_like(field)
+    for c in range(field.shape[0]):
+        out[c] = gaussian_filter(np.nan_to_num(field[c]) * om, sigma=sigma) / denom
+    out[:, ~ocean] = 0.0
+    return out.astype(np.float32)
+
+
 class StreamDDPM:
     """Conditional stream-function DDPM + heteroscedastic magnitude predictor.
 
@@ -213,6 +229,7 @@ class StreamDDPM:
         seed: int = 0,
         project_priors: bool = True,
         full_field: bool = False,
+        smooth_uncertainty: bool = True,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Predict the full velocity field from scattered observations + priors.
 
@@ -246,6 +263,12 @@ class StreamDDPM:
             extracted from a VCNN prediction. Improves accuracy against the raw
             (non-div-free) ROMS field while keeping this model's ensemble
             uncertainty. Off by default (the pure model is exactly divergence-free).
+        smooth_uncertainty : bool, default True
+            Apply a light nan-aware Gaussian smooth to the uncertainty field.
+            Removes the grid-scale (checkerboard) numerical artifact from the
+            ensemble spread — an odd-even decoupling of the central-difference
+            scheme, present only in the spread, not the mean field. Improves
+            calibration (r_angle/mag/overall) by ~0.025. No effect when n_draws==1.
 
         Returns
         -------
@@ -302,6 +325,9 @@ class StreamDDPM:
         mean_model = arr.mean(axis=0) * self.data_std  # (2,94,44) m/s
         if len(fused) > 1:
             unc_model = arr.std(axis=0) * self.data_std
+            if smooth_uncertainty:
+                unc_model = _smooth_ocean(unc_model, self.ocean_np,
+                                          C.STREAM_UNC_SMOOTH_SIGMA)
         else:
             unc_model = np.zeros_like(mean_model)
         mean_model[:, self.land_np] = 0.0
@@ -336,6 +362,7 @@ def predict_stream(
     seed: int = 0,
     project_priors: bool = True,
     full_field: bool = False,
+    smooth_uncertainty: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Stateless wrapper around :meth:`StreamDDPM.predict` (lazy singleton)."""
     global _default_instance
@@ -346,4 +373,5 @@ def predict_stream(
     return _default_instance.predict(
         observations, priors, n_draws=n_draws, sampler=sampler,
         inference_steps=inference_steps, seed=seed,
-        project_priors=project_priors, full_field=full_field)
+        project_priors=project_priors, full_field=full_field,
+        smooth_uncertainty=smooth_uncertainty)

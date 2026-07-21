@@ -115,6 +115,17 @@ def test_stream_full_field_adds_divergent(stream):
     np.testing.assert_allclose(u_on, u_off)          # uncertainty unchanged
 
 
+def test_stream_smooth_uncertainty(stream):
+    """smooth_uncertainty (default) changes the uncertainty but not the mean."""
+    obs, pri = _obs(), _priors()
+    m_s, u_s = stream.predict(obs, pri, n_draws=3, inference_steps=5, seed=1)   # default True
+    m_r, u_r = stream.predict(obs, pri, n_draws=3, inference_steps=5, seed=1,
+                              smooth_uncertainty=False)
+    np.testing.assert_allclose(m_s, m_r)             # mean field unaffected
+    assert not np.allclose(u_s, u_r)                 # uncertainty was smoothed
+    assert np.isfinite(u_s).all()
+
+
 def test_stream_project_priors_flag_changes_input(stream):
     """project_priors should change the result for a non-div-free prior."""
     rng = np.random.default_rng(2)

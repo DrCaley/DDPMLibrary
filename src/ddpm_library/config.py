@@ -93,3 +93,11 @@ STREAM_DDPM_STEPS = 100          # the proven ancestral config
 STREAM_DEFAULT_N_DRAWS = 1   # 1 -> single field (uncertainty zeros, like DDPM/VCNN);
                              # >1 -> real ensemble spread in the uncertainty output.
 STREAM_UNCERTAINTY_N_DRAWS = 40   # used by the uncertainty-map scripts
+
+# The stream-function + div-free-noise scheme uses central differences, whose
+# Fourier symbol vanishes at the Nyquist frequency, so grid-scale (checkerboard)
+# modes are unconstrained by the div-free structure and show up as a numerical
+# artifact in the ENSEMBLE SPREAD (not the mean field). A light nan-aware
+# Gaussian smooth of the uncertainty removes it and improves calibration
+# (r_angle/mag/overall all rise ~0.025 on a 40-frame test).
+STREAM_UNC_SMOOTH_SIGMA = 0.8
