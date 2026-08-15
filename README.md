@@ -345,3 +345,60 @@ index). Two observations at the same grid cell get averaged.
   old iterative behaviour.
 - **0.1.0** — Initial release. Split-head Helmholtz multi-res model, no-
   bathymetry Rams Head checkpoint. Uncertainty stub.
+
+## CorrDiff — calibrated uncertainty (v0.5.0)
+
+`CorrDiff` is the research group's best model and the **only predictor here whose
+`uncertainty` output is calibrated** rather than zeros. A deterministic V-CNN supplies
+the mean field; a conditional diffusion model generates the *residual* (truth − mean),
+after Mardani et al. (2025). Sampling many residuals gives an ensemble whose mean is the
+reconstruction and whose spread is a usable uncertainty estimate.
+
+```python
+from ddpm_library import CorrDiff
+
+model = CorrDiff(device="auto")
+mean, uncertainty = model.predict(observations, priors=priors)
+# mean, uncertainty : (44, 94, 2) in m/s
+```
+
+**Sensor-noise dial.** The model is conditioned on the observation error it should
+assume, so one set of weights serves any instrument:
+
+```python
+mean, unc = model.predict(obs, priors, sensor_noise=0.05)   # 5 %-error sensors
+```
+
+`sensor_noise` is a fraction of the field standard deviation, in `[0, 0.10]`. Larger
+values widen the predictive distribution and trust the observations less.
+
+**Calibration.** The raw diffusion ensemble is under-dispersed (a known property of
+conditional diffusion models). `predict()` applies a pre-fitted scale factor by default
+so that `mean ± 1.645 × uncertainty` covers ~90 % of outcomes; it was fitted by split
+conformal on held-out frames and verified out-of-sample at 0.8999 coverage against a
+0.900 target. Pass `calibrate=False` for the raw ensemble spread.
+
+**Cost.** `n_draws` defaults to a full ensemble because uncertainty is the point of this
+model. Pass `n_draws=1` for a single field (uncertainty is then zeros, like the other
+predictors).
+
+## Comparing models
+
+`ddpm_library.metrics` is a shared suite so any predictor implementing the
+`predict(...) -> (mean, uncertainty)` contract — including models contributed by
+collaborators — can be scored identically:
+
+```bash
+python scripts/compare_models.py --pickle /path/to/data.pickle \
+    --models vcnn corrdiff stream --n-frames 40
+```
+
+The headline score is **CRPS**, which reduces exactly to mean absolute error when the
+uncertainty is zero — so deterministic and probabilistic models sit on one axis with no
+special-casing. The script scores every model on the frames, observations and a common
+ocean mask, and reports accuracy (RMSE, split by observed vs unobserved cells; angle
+error), calibration (spread–skill, 90 % coverage) and structure (small-scale energy
+ratio, FSS skilful scale, Okubo–Weiss eddy hit rate).
+
+To add a model, implement the contract and register it in `MODEL_REGISTRY` in
+`scripts/compare_models.py`.

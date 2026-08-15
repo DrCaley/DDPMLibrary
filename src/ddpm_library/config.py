@@ -101,3 +101,46 @@ STREAM_UNCERTAINTY_N_DRAWS = 40   # used by the uncertainty-map scripts
 # Gaussian smooth of the uncertainty removes it and improves calibration
 # (r_angle/mag/overall all rise ~0.025 on a 40-frame test).
 STREAM_UNC_SMOOTH_SIGMA = 0.8
+
+
+# ===========================================================================
+# CorrDiff pipeline (the research group's best model — V-CNN mean + residual
+# diffusion with a sensor-noise dial). Additive: does NOT affect the predictors
+# above.
+# ===========================================================================
+
+# Assets (bundled via git-LFS like the other *.pt weights).
+CORRDIFF_WEIGHTS_PATH = _ASSETS_DIR / "corrdiff_weights.pt"   # residual diffusion UNet
+CORRDIFF_GRID_PATH = _ASSETS_DIR / "corrdiff_grid.npz"        # land_mask + stats + lags
+
+# Native model grid orientation (transpose of the library's lat x lon grid):
+#   library grid is (lat=44, lon=94); the CorrDiff model works in (94, 44).
+CORRDIFF_H, CORRDIFF_W = 94, 44
+
+# Checkpoint architecture / diffusion config (from corrdiff_sigma epoch 199).
+CORRDIFF_COND_CH = 11        # 4 obs (u, v, mask, dist-to-path) + 4 priors + 3 geom
+CORRDIFF_LAGS = (13, 25)     # temporal-prior lags, in hours/frames
+CORRDIFF_BASE_CH = 64
+CORRDIFF_TIME_DIM = 256
+CORRDIFF_T = 1000            # training diffusion steps (cosine, v-prediction)
+
+# Sampling. 50 DDIM steps is the evaluated setting. The ensemble MEAN is far less
+# sensitive to step count than the SPREAD is: at 16 steps the mean RMSE is within
+# ~2% but the distribution degrades, so do not reduce this when uncertainty matters.
+CORRDIFF_STEPS = 50
+CORRDIFF_DEFAULT_N_DRAWS = 20   # uncertainty is the point of this model; 1 = fast
+                                # single field with zero uncertainty.
+
+# Sensor-noise dial: the model was trained on sigma ~ U(0, CORRDIFF_NOISE_MAX),
+# expressed as a fraction of the field standard deviation. predict() rejects
+# values outside this range rather than silently extrapolating.
+CORRDIFF_NOISE_MAX = 0.10
+
+# Calibration. The raw diffusion ensemble is under-dispersed — a known property of
+# conditional diffusion models, reported by the original CorrDiff paper too. This
+# factor rescales the raw ensemble std into a calibrated 1-sigma, so the ordinary
+# Gaussian reading holds: mu +/- 1.645 * sigma covers ~90% of outcomes. Fitted by
+# split conformal on held-out frames at dial = 0 (see scripts/, MEASURED — do not
+# edit by hand without re-fitting).
+CORRDIFF_SIGMA_SCALE = 1.6787   # MEASURED: split conformal, 60 held-out frames,
+                                # dial=0; out-of-sample coverage 0.8999 vs 0.900 target.

@@ -8,6 +8,10 @@ Two predictors are provided:
 * :class:`DDPM` — split-head diffusion model. Generative; can produce
   multiple plausible samples per call but has higher RMSE than V-CNN
   in our benchmarks.
+* :class:`CorrDiff` — V-CNN mean + residual diffusion with a sensor-noise
+  dial. The most accurate predictor here, and the only one whose
+  ``uncertainty`` output is calibrated rather than zeros. Needs temporal
+  priors, like :class:`StreamDDPM`.
 
 Both share the same ``predict([(lat, lon, unix_t, u, v), ...])`` API.
 
@@ -26,9 +30,12 @@ See README.md for details.
 from .predict import DDPM, predict
 from .vcnn_predict import VCNN, predict_vcnn
 from .stream_predict import StreamDDPM, predict_stream
+from .corrdiff_predict import CorrDiff, predict_corrdiff
+from . import metrics
 
 __all__ = [
-    "DDPM", "VCNN", "StreamDDPM",
-    "predict", "predict_vcnn", "predict_stream",
+    "DDPM", "VCNN", "StreamDDPM", "CorrDiff",
+    "predict", "predict_vcnn", "predict_stream", "predict_corrdiff",
+    "metrics",
 ]
-__version__ = "0.4.0"
+__version__ = "0.5.0"
