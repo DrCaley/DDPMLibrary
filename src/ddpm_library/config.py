@@ -144,3 +144,34 @@ CORRDIFF_NOISE_MAX = 0.10
 # edit by hand without re-fitting).
 CORRDIFF_SIGMA_SCALE = 1.6787   # MEASURED: split conformal, 60 held-out frames,
                                 # dial=0; out-of-sample coverage 0.8999 vs 0.900 target.
+
+
+# ===========================================================================
+# RePaint pipeline (collaborator model: linear-schedule RePaint UNet, temporal
+# priors as conditioning, observations imposed by DPS/MCG guidance at sampling).
+# Additive: does NOT affect the predictors above.
+# ===========================================================================
+
+REPAINT_WEIGHTS_PATH = _ASSETS_DIR / "repaint_timecond_weights.pt"
+
+# Native model grid (same as the other pipelines: library is lat x lon 44 x 94).
+REPAINT_H, REPAINT_W = 94, 44
+
+# From the checkpoint (epoch 120, val_loss 2.13e-4).
+REPAINT_COND_CH = 4          # prev_13h(u, v), prev_25h(u, v)
+REPAINT_LAGS = (13, 25)
+REPAINT_BASE_CH = 64
+REPAINT_TIME_DIM = 256
+REPAINT_T = 1000
+REPAINT_SCHEDULE = "linear"
+
+# IMPORTANT: this pipeline is trained on RAW physical values (m/s), NOT z-scored,
+# unlike the CorrDiff/Stream pipelines. Do not standardize its inputs.
+REPAINT_NOISE_STD = 0.11614292860031128   # from the checkpoint; scales the initial latent
+
+# Sampling. The published evaluation used DPS/MCG with step_size (z) = 0.04 and
+# the full 1000-step chain; stride > 1 subsamples the chain for speed.
+REPAINT_SAMPLER = "dps"       # DPS marginally beat MCG in the published numbers
+REPAINT_STEP_SIZE = 0.04
+REPAINT_STRIDE = 1
+REPAINT_DEFAULT_N_DRAWS = 10  # the published evaluation used n = 10 per seed

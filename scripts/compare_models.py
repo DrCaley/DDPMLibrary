@@ -61,12 +61,18 @@ def _ddpm(device):
     return DDPM(device=device)
 
 
+def _repaint(device):
+    from ddpm_library import RePaint
+    return RePaint(device=device)
+
+
 MODEL_REGISTRY = {
     # name        factory     needs_priors  predict kwargs
     "vcnn":      (_vcnn,      False, {}),
     "corrdiff":  (_corrdiff,  True,  {"n_draws": 20}),
     "stream":    (_stream,    True,  {"n_draws": 20}),
     "ddpm":      (_ddpm,      False, {}),
+    "repaint":   (_repaint,   True,  {"n_draws": 10}),   # collaborator model
 }
 
 

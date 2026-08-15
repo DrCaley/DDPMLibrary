@@ -31,11 +31,13 @@ from .predict import DDPM, predict
 from .vcnn_predict import VCNN, predict_vcnn
 from .stream_predict import StreamDDPM, predict_stream
 from .corrdiff_predict import CorrDiff, predict_corrdiff
+from .repaint_predict import RePaint, predict_repaint
 from . import metrics
 
 __all__ = [
-    "DDPM", "VCNN", "StreamDDPM", "CorrDiff",
+    "DDPM", "VCNN", "StreamDDPM", "CorrDiff", "RePaint",
     "predict", "predict_vcnn", "predict_stream", "predict_corrdiff",
+    "predict_repaint",
     "metrics",
 ]
 __version__ = "0.5.0"
