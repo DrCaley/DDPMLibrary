@@ -66,13 +66,21 @@ def _repaint(device):
     return RePaint(device=device)
 
 
+def _repaint_uncond(device):
+    """The collaborator's second model: same architecture, no temporal priors."""
+    from ddpm_library import RePaint
+    from ddpm_library.config import REPAINT_UNCOND_WEIGHTS_PATH
+    return RePaint(device=device, weights_path=REPAINT_UNCOND_WEIGHTS_PATH)
+
+
 MODEL_REGISTRY = {
     # name        factory     needs_priors  predict kwargs
     "vcnn":      (_vcnn,      False, {}),
     "corrdiff":  (_corrdiff,  True,  {"n_draws": 20}),
     "stream":    (_stream,    True,  {"n_draws": 20}),
     "ddpm":      (_ddpm,      False, {}),
-    "repaint":   (_repaint,   True,  {"n_draws": 10}),   # collaborator model
+    "repaint":   (_repaint,   True,  {"n_draws": 10}),   # collaborator: time-conditioned
+    "repaint_uncond": (_repaint_uncond, False, {"n_draws": 10}),  # collaborator: no priors
 }
 
 

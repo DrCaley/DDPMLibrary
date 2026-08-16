@@ -87,12 +87,16 @@ class RePaint:
         ck = torch.load(wpath, map_location="cpu", weights_only=False)
         a = ck.get("args", {})
 
-        self.cond_ch = int(ck.get("cond_ch", C.REPAINT_COND_CH))
-        self.lags = tuple(int(x) for x in ck.get("lags", C.REPAINT_LAGS))
+        # Both of the collaborator's checkpoints are supported. The time-conditioned
+        # one stores cond_ch=4 / lags=(13, 25); the unconditional one stores an
+        # explicit None for both, so `or` (not a .get default) is what handles it.
+        self.cond_ch = int(ck.get("cond_ch") or 0)
+        self.lags = tuple(int(x) for x in (ck.get("lags") or ()))
         if self.cond_ch != 2 * len(self.lags):
             raise RuntimeError(
                 f"checkpoint cond_ch={self.cond_ch} is inconsistent with lags="
                 f"{self.lags} (expected {2 * len(self.lags)} channels).")
+        self.conditional = self.cond_ch > 0
 
         self.model = Repaint(
             in_ch=2, cond_ch=self.cond_ch,
@@ -125,8 +129,20 @@ class RePaint:
         """(44, 94) ocean mask (1 = ocean), library orientation."""
         return self.ocean_np.T.astype(np.float32).copy()
 
-    def _build_priors(self, priors) -> np.ndarray:
-        """(cond_ch, 94, 44) temporal priors in PHYSICAL m/s (no standardization)."""
+    def _build_priors(self, priors):
+        """(cond_ch, 94, 44) temporal priors in PHYSICAL m/s (no standardization).
+
+        Returns None for an unconditional checkpoint, which takes no priors at all.
+        """
+        if not self.conditional:
+            if priors is not None:
+                warnings.warn(
+                    "this checkpoint is unconditional (cond_ch=0); the `priors` you "
+                    "passed are ignored. Use the time-conditioned checkpoint if you "
+                    "want the 13h/25h priors to be used.",
+                    stacklevel=3,
+                )
+            return None
         n_lags = len(self.lags)
         if priors is None:
             warnings.warn(
@@ -213,7 +229,8 @@ class RePaint:
         x0_known[:, ~path_mask] = 0.0          # observed cells only, as the sampler expects
 
         cond_np = self._build_priors(priors)
-        cond_t = torch.from_numpy(cond_np).unsqueeze(0).to(self.device)
+        cond_t = (None if cond_np is None
+                  else torch.from_numpy(cond_np).unsqueeze(0).to(self.device))
         x0_known_t = torch.from_numpy(x0_known)
 
         infer = SAMPLERS[sampler]
