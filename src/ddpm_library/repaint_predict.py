@@ -182,7 +182,7 @@ class RePaint:
         sampler: str = C.REPAINT_SAMPLER,
         step_size: float = C.REPAINT_STEP_SIZE,
         stride: int = C.REPAINT_STRIDE,
-        seed: int = 0,
+        seed=None,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Reconstruct the field from scattered observations and temporal priors.
 
@@ -266,7 +266,7 @@ def predict_repaint(
     sampler: str = C.REPAINT_SAMPLER,
     step_size: float = C.REPAINT_STEP_SIZE,
     stride: int = C.REPAINT_STRIDE,
-    seed: int = 0,
+    seed= None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Stateless wrapper around :meth:`RePaint.predict` (lazy singleton)."""
     global _default_instance

@@ -47,7 +47,7 @@ class VDiffusion:
 
 @torch.no_grad()
 def ddim_sample_residual(model, cond_aug, ocean_t, diff, device,
-                         n_draws: int = 8, steps: int = 50, seed: int = 0):
+                         n_draws: int = 8, steps: int = 50, seed: int = 0): 
     """Sample ``n_draws`` residual fields for ONE conditioning stack.
 
     ``cond_aug`` is the full conditioning tensor (1, total_cond, H, W) -- it already
@@ -61,7 +61,12 @@ def ddim_sample_residual(model, cond_aug, ocean_t, diff, device,
     H, W = ocean_t.shape[-2:]
     condB = cond_aug.expand(B, -1, -1, -1).to(device)
     oc = ocean_t.to(device).float()
-    g = torch.Generator(device=device).manual_seed(seed)
+    
+    if seed is not None:
+        g = torch.Generator(device=device).manual_seed(seed)
+    else:
+        g = None
+
     x = torch.randn(B, 2, H, W, generator=g, device=device) * oc
     ts = torch.linspace(diff.T - 1, 0, steps, device=device).long()
     for i in range(steps):

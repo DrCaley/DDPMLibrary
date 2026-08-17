@@ -33,6 +33,7 @@ from .stream_predict import StreamDDPM, predict_stream
 from .corrdiff_predict import CorrDiff, predict_corrdiff
 from .repaint_predict import RePaint, predict_repaint
 from . import metrics
+from .geo import grid_arrays
 
 __all__ = [
     "DDPM", "VCNN", "StreamDDPM", "CorrDiff", "RePaint",

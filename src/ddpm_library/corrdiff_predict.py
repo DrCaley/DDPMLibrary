@@ -219,7 +219,7 @@ class CorrDiff:
         sensor_noise: float = 0.0,
         n_draws: int = C.CORRDIFF_DEFAULT_N_DRAWS,
         steps: int = C.CORRDIFF_STEPS,
-        seed: int = 0,
+        seed= None,
         calibrate: bool = True,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Predict the full velocity field and its uncertainty.
@@ -341,7 +341,7 @@ def predict_corrdiff(
     sensor_noise: float = 0.0,
     n_draws: int = C.CORRDIFF_DEFAULT_N_DRAWS,
     steps: int = C.CORRDIFF_STEPS,
-    seed: int = 0,
+    seed=None,
     calibrate: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Stateless wrapper around :meth:`CorrDiff.predict` (lazy singleton)."""
