@@ -1,5 +1,11 @@
 # Linear Best Model — NOT time conditioned
 
+> **Archived reference copy.** This folder holds the collaborator's original
+> training, dataset and evaluation scripts. The model, diffusion and sampler
+> code they describe has been vendored into `src/ddpm_library/repaint/`; run
+> inference through `ddpm_library.RePaintUncond` (see the repo README). File names below are the
+> originals; the renames on disk are listed in `README.md`.
+
 This is the plain, unconditional model — the exact original
 `best_model_linear.pt` recipe (`Inference Tests and Results/best-model-linear-curldiv-gaussian/checkpoints_linear/best_model_linear.pt`).
 It has **no time conditioning of any kind**: no temporal priors, no
@@ -7,7 +13,7 @@ observation channels, no geometry channels. The `Repaint` model here takes
 only the noisy field `x_t` and the diffusion timestep `t` — nothing else.
 
 For the variant that IS conditioned on the real ocean state 13h/25h earlier,
-see the sibling folder `../Linear Best Model - Time Conditioned/`.
+see the sibling folder `README_timecond.md`.
 
 ## Files
 

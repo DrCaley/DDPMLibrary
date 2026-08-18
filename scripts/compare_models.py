@@ -68,9 +68,8 @@ def _repaint(device):
 
 def _repaint_uncond(device):
     """The collaborator's second model: same architecture, no temporal priors."""
-    from ddpm_library import RePaint
-    from ddpm_library.config import REPAINT_UNCOND_WEIGHTS_PATH
-    return RePaint(device=device, weights_path=REPAINT_UNCOND_WEIGHTS_PATH)
+    from ddpm_library import RePaintUncond
+    return RePaintUncond(device=device)
 
 
 MODEL_REGISTRY = {

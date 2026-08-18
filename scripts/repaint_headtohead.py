@@ -13,9 +13,8 @@ import warnings
 import numpy as np
 
 sys.path.insert(0, "/Users/henryw/Documents/DDPMLibrary/src")
-from ddpm_library import RePaint, metrics                                  # noqa: E402
-from ddpm_library.config import (LAT_MAX, LAT_MIN, LON_MAX, LON_MIN,       # noqa: E402
-                                 REPAINT_UNCOND_WEIGHTS_PATH, REPAINT_WEIGHTS_PATH)
+from ddpm_library import RePaint, RePaintUncond, metrics                   # noqa: E402
+from ddpm_library.config import LAT_MAX, LAT_MIN, LON_MAX, LON_MIN         # noqa: E402
 
 PICKLE = "/Users/henryw/Documents/DiffusionSummer2026/Datasets/pickles/data_raw_chrono.pickle"
 N_FRAMES, N_DRAWS, STRIDE, N_OBS, LAGS = 4, 3, 1, 90, (13, 25)
@@ -29,8 +28,8 @@ lats = np.linspace(LAT_MIN, LAT_MAX, 44)
 lons = np.linspace(LON_MIN, LON_MAX, 94)
 
 models = {
-    "timecond": RePaint(device="cpu", weights_path=REPAINT_WEIGHTS_PATH),
-    "uncond":   RePaint(device="cpu", weights_path=REPAINT_UNCOND_WEIGHTS_PATH),
+    "timecond": RePaint(device="cpu"),
+    "uncond":   RePaintUncond(device="cpu"),
 }
 common = np.ones((44, 94), bool)
 for m in models.values():
@@ -62,8 +61,8 @@ for n, t in enumerate(picks):
         t0 = time.perf_counter()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            mean, unc = mdl.predict(obs, priors_lib, n_draws=N_DRAWS,
-                                    stride=STRIDE, seed=t)
+            args = (obs, priors_lib) if mdl.takes_priors else (obs,)
+            mean, unc = mdl.predict(*args, n_draws=N_DRAWS, stride=STRIDE, seed=t)
         res = metrics.evaluate(mean, unc, truth_lib, ocean_mask=common,
                                observed_mask=omask)
         acc[name].append(res)

@@ -9,7 +9,7 @@ conditioned. Requires a chrono_v1 pickle (built by
 utils/build_chrono_dataset.py), e.g. "Stride Conditional/data_chrono_raw.pickle".
 
 Usage (run from workspace root):
-    python "Linear Best Model - Time Conditioned/train_TimeConditioned.py" \
+    python research/repaint/train_timecond.py \
         --pickle "Stride Conditional/data_chrono_raw.pickle" \
         --schedule linear --epochs 150
 """

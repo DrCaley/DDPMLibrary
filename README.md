@@ -278,24 +278,37 @@ m2, _ = ddpm.predict(obs, seed=42)
 
 ## Repository layout
 
+Each model follows the same pattern: a `<name>_predict.py` holding the public
+class, and a `<name>/` package holding that pipeline's vendored network, schedule
+and sampler, so no model depends on a research repo or on another model.
+
 ```
 DDPMLibrary/
-├── assets/
-│   ├── weights.pt            # ~110 MB, tracked with git-lfs
-│   └── lat_lon_grid.npz      # native grid coordinates
 ├── src/
 │   └── ddpm_library/
-│       ├── __init__.py       # exports DDPM, predict
-│       ├── predict.py        # public API
-│       ├── inference.py      # reverse-diffusion loop
-│       ├── geo.py            # lat/lon ↔ grid-index
-│       ├── rasterize.py      # obs list → sparse channels
-│       ├── standardize.py    # z-score helpers
-│       ├── config.py         # bounding box, grid, checkpoint metadata
-│       └── model/            # vendored UNet + schedule (no research-repo deps)
+│       ├── __init__.py           # exports every predictor
+│       ├── config.py             # bounding box, grid, per-model checkpoint metadata
+│       ├── geo.py                # lat/lon ↔ grid-index
+│       ├── rasterize.py          # obs list → sparse channels
+│       ├── standardize.py        # z-score helpers
+│       ├── metrics.py            # shared scoring suite (CRPS, RMSE, calibration…)
+│       ├── inference.py          # reverse-diffusion loop (DDPM)
+│       │
+│       ├── predict.py            # DDPM          ─┐
+│       ├── vcnn_predict.py       # VCNN           │ public classes
+│       ├── stream_predict.py     # StreamDDPM     │
+│       ├── corrdiff_predict.py   # CorrDiff       │
+│       ├── repaint_predict.py    # RePaint, RePaintUncond ─┘
+│       │
+│       ├── model/                # vendored: DDPM + V-CNN networks
+│       ├── stream/               # vendored: stream-function pipeline
+│       ├── corrdiff/             # vendored: CorrDiff UNet + v-diffusion
+│       ├── repaint/              # vendored: RePaint UNet + DPS/MCG samplers
+│       └── assets/               # checkpoints + grids, tracked with git-lfs
+├── research/
+│   └── repaint/                  # archived collaborator training code (not packaged)
+├── scripts/                      # examples, benchmarks, compare_models.py
 ├── tests/
-├── scripts/
-│   └── example.py
 ├── pyproject.toml
 ├── requirements.txt
 └── README.md
@@ -339,6 +352,16 @@ index). Two observations at the same grid cell get averaged.
 
 ## Changelog
 
+- **0.6.0** — The two RePaint models are now separate classes, `RePaint`
+  (time-conditioned) and `RePaintUncond`, instead of one class switched by
+  `weights_path`; each rejects the other's checkpoint. `RePaintUncond.predict`
+  takes no `priors` argument. Collaborator training code moved from the two
+  top-level `Linear Best Model - …/` folders into `research/repaint/`, dropping
+  a duplicated 171 MB checkpoint and four files now vendored in
+  `src/ddpm_library/repaint/`. `pytest` runs from a clean checkout without
+  `pip install -e .`.
+- **0.5.0** — Added `CorrDiff` (calibrated uncertainty, sensor-noise dial), the
+  shared `metrics` suite and `scripts/compare_models.py`.
 - **0.2.0** — Single-step inference is now the default (`single_step=True`).
   One UNet forward pass instead of the full 250-step RePaint chain —
   ~800× faster (~40 ms on MPS/CUDA). Pass `single_step=False` to get the
@@ -381,6 +404,44 @@ conformal on held-out frames and verified out-of-sample at 0.8999 coverage again
 **Cost.** `n_draws` defaults to a full ensemble because uncertainty is the point of this
 model. Pass `n_draws=1` for a single field (uncertainty is then zeros, like the other
 predictors).
+
+## RePaint — guided sampling (v0.6.0)
+
+Two collaborator models sharing one architecture. Neither is trained on the
+observations: the sparse measurements are imposed at *sampling* time by a
+guidance term (DPS, or MCG which additionally replaces the observed cells each
+step). That makes them the natural comparison point for **guided sampling versus
+trained conditioning** — CorrDiff feeds the observations to the network instead.
+
+They differ only in whether the network sees the ocean state 13 h and 25 h
+earlier, so each gets its own class rather than a weights argument:
+
+```python
+from ddpm_library import RePaint, RePaintUncond
+
+# time-conditioned: takes the two prior fields as four extra input channels
+mean, unc = RePaint(device="auto").predict(observations, priors, n_draws=10)
+
+# unconditional: no priors, so `predict` has no `priors` argument at all
+mean, unc = RePaintUncond(device="auto").predict(observations, n_draws=10)
+```
+
+Each class pins its own checkpoint and **refuses the sibling's**, so a wrong
+`weights_path` fails loudly instead of silently running the other model.
+
+**Uncertainty is raw, not calibrated.** Unlike `CorrDiff` these have no fitted
+scale factor, so `uncertainty` is the bare ensemble standard deviation and is
+expected to be under-dispersed. Do not read it as a calibrated 1-sigma.
+
+**These work in physical m/s**, not z-scored — the library handles that, but it
+matters if you use the vendored pieces directly.
+
+**Cost.** Guided sampling runs the full 1000-step chain *with a gradient at every
+step*, so it is far slower than CorrDiff's DDIM sampler. Pass `stride > 1` to
+subsample the chain when you need speed; `stride=1` is the published setting.
+
+Training code and the collaborator's own documentation are archived in
+`research/repaint/`.
 
 ## Comparing models
 

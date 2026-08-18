@@ -1,9 +1,8 @@
 """Guided samplers for the RePaint model: DPS and MCG, with conditioning support.
 
-Ported from the research code (``Linear Best Model - Not Time Conditioned/
-run_mcg_dps_z004.py``) with one change: the ``cond`` tensor (temporal priors) is
-threaded through to the network, which the original scripts did not need because
-that model was unconditional. The model and diffusion classes already accepted a
+Ported from the research code (``research/repaint/run_mcg_dps_z004.py``) with one
+change: the ``cond`` tensor (temporal priors) is threaded through to the network,
+which the original scripts did not need because that model was unconditional. The model and diffusion classes already accepted a
 ``cond`` argument, so nothing else changes.
 
 NOTE ON PROVENANCE. The exact script that produced the published time-conditioned

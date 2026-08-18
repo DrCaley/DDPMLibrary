@@ -152,9 +152,11 @@ CORRDIFF_SIGMA_SCALE = 1.6787   # MEASURED: split conformal, 60 held-out frames,
 # Additive: does NOT affect the predictors above.
 # ===========================================================================
 
+# One checkpoint per variant; each is pinned by its own class (RePaint /
+# RePaintUncond), which rejects the other's checkpoint rather than silently
+# running the wrong model.
 REPAINT_WEIGHTS_PATH = _ASSETS_DIR / "repaint_timecond_weights.pt"
-# The collaborator's second model: same architecture, trained WITHOUT temporal priors
-# (cond_ch = 0). Pass this to RePaint(weights_path=...) to run the unconditional variant.
+# Same architecture, trained WITHOUT temporal priors (cond_ch = 0).
 REPAINT_UNCOND_WEIGHTS_PATH = _ASSETS_DIR / "repaint_uncond_weights.pt"
 
 # Native model grid (same as the other pipelines: library is lat x lon 44 x 94).

@@ -49,3 +49,8 @@ include = ["ddpm_library*"]
 
 [tool.setuptools.package-data]
 ddpm_library = ["assets/*.pt", "assets/*.npz"]
+
+[tool.pytest.ini_options]
+# So `pytest` works from a clean checkout without `pip install -e .` first.
+pythonpath = ["src"]
+testpaths = ["tests"]

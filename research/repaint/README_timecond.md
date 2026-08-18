@@ -1,5 +1,11 @@
 # Linear Best Model — Time Conditioned
 
+> **Archived reference copy.** This folder holds the collaborator's original
+> training, dataset and evaluation scripts. The model, diffusion and sampler
+> code they describe has been vendored into `src/ddpm_library/repaint/`; run
+> inference through `ddpm_library.RePaint` (see the repo README). File names below are the
+> originals; the renames on disk are listed in `README.md`.
+
 Everything needed to train, run, and evaluate the time-conditioned model —
 the linear Repaint architecture additionally shown the REAL ocean state 13
 hours and 25 hours before the target frame (a genuine per-pixel history
@@ -7,7 +13,7 @@ signal, not a global hour-of-day embedding), read from a chronologically
 ordered dataset so those priors are never fabricated.
 
 For the plain (non-conditioned) sibling model, see
-`../Linear Best Model - Not Time Conditioned/`.
+`README_uncond.md`.
 
 ## Status: trained and evaluated
 
@@ -102,7 +108,7 @@ reconstruct the exact architecture/training recipe from the file alone.
 
 3. **Train**:
    ```bash
-   python "Linear Best Model - Time Conditioned/train_TimeConditioned.py" \
+   python research/repaint/train_timecond.py \
        --pickle "Stride Conditional/data_chrono_raw.pickle" \
        --schedule linear --epochs 150
    ```
@@ -129,8 +135,7 @@ reconstruct the exact architecture/training recipe from the file alone.
 6. **To reproduce the *unconditional* sibling instead**, use `cond_ch=0` /
    `cond=None` — the same `repaint_model.py`/`diffusion.py` in this folder
    already support that path exactly. The actual unconditional training/
-   inference *scripts* (`train.py`, `run_mcg_dps_z004.py`) live in the sibling
-   `../Linear Best Model - Not Time Conditioned/` folder, not here.
+   inference *scripts* (`train_uncond.py`, `run_mcg_dps_z004.py`) are alongside this file.
 
 ## 3. Inference types (MCG and DPS, z=0.04)
 
