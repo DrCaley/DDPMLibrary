@@ -29,7 +29,8 @@ def _x0_hat(stream_model, diffusion, xt, t_t, cond, pred_type):
 
 
 def _init_latent(diffusion, n, H, W, ocean, device, seed):
-    torch.manual_seed(seed)
+    if seed is not None:
+        torch.manual_seed(seed)
     x = diffusion._sample_noise(torch.empty(n, 2, H, W, device=device))
     return x * diffusion.noise_scale * ocean
 
@@ -60,7 +61,8 @@ def sample_one(stream_model, diffusion, cond, land_np, *, inference_steps,
     eps_model = eps_wrapper_for(stream_model, diffusion, pred_type,
                                 cond=cond_b).to(device)
 
-    torch.manual_seed(seed)
+    if seed is not None:
+        torch.manual_seed(seed)
     xt = diffusion._sample_noise(torch.empty(1, 2, H, W, device=device))
     xt = xt * diffusion.noise_scale * ocean_f
 
