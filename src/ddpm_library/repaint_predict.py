@@ -200,8 +200,9 @@ class RePaint:
             Guidance strength (``z`` in the research scripts; published value 0.04).
         stride : int
             Step through the reverse chain; 1 uses all T steps (published setting).
-        seed : int
-            Base RNG seed; draw ``k`` uses ``seed + k``.
+        seed : int or None
+            Base RNG seed; draw ``k`` uses ``seed + k``. ``None`` (the default)
+            leaves the global RNG untouched, so draws are not reproducible.
 
         Returns
         -------
@@ -236,7 +237,8 @@ class RePaint:
         infer = SAMPLERS[sampler]
         draws = []
         for k in range(n_draws):
-            torch.manual_seed(seed + k)        # the research scripts seed this way
+            if seed is not None:               # seed=None -> non-reproducible draws,
+                torch.manual_seed(seed + k)    # matching the rest of the library
             draws.append(infer(
                 self.model, self.diffusion, x0_known_t, path_mask, self.land_np,
                 cond=cond_t, device=str(self.device), stride=stride,

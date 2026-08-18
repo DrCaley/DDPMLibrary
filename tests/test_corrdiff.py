@@ -81,10 +81,17 @@ def test_reproducible(model, inputs):
 
 @_needs_assets
 def test_calibration_scaling(model, inputs):
-    """calibrate=True must scale the raw spread by exactly the fitted factor."""
+    """calibrate=True must scale the raw spread by exactly the fitted factor.
+
+    The seed is pinned explicitly: the library default is seed=None (draws are not
+    reproducible), so two separate predict() calls would otherwise differ by
+    sampling noise and this comparison would be meaningless.
+    """
     obs, priors = inputs
-    _, raw = model.predict(obs, priors, n_draws=_DRAWS, steps=_STEPS, calibrate=False)
-    _, cal = model.predict(obs, priors, n_draws=_DRAWS, steps=_STEPS, calibrate=True)
+    _, raw = model.predict(obs, priors, n_draws=_DRAWS, steps=_STEPS, seed=11,
+                           calibrate=False)
+    _, cal = model.predict(obs, priors, n_draws=_DRAWS, steps=_STEPS, seed=11,
+                           calibrate=True)
     ocean = model.ocean_mask > 0.5
     assert np.allclose(cal[ocean], raw[ocean] * CORRDIFF_SIGMA_SCALE, rtol=1e-5)
 
