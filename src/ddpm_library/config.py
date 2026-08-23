@@ -145,6 +145,16 @@ CORRDIFF_NOISE_MAX = 0.10
 CORRDIFF_SIGMA_SCALE = 1.6787   # MEASURED: split conformal, 60 held-out frames,
                                 # dial=0; out-of-sample coverage 0.8999 vs 0.900 target.
 
+# The factor above assumes every observation was taken at the SAME instant. A real
+# vehicle needs ~1.2 h to cover 90 cells, and over that window the field moves more
+# than the model's own error, so the intervals come out too narrow (coverage ~0.82).
+# This is the factor refit on time-stamped observations sampled from the field at the
+# moment each cell was actually visited. Pass it as `sigma_scale=` when your
+# observations were collected over a period rather than simultaneously.
+# MEASURED by `scripts/staleness.py recalibrate`: split conformal, 58 frames (29 fit /
+# 29 verify), out-of-sample coverage 0.9096 vs 0.900 target; intervals 1.24x wider.
+CORRDIFF_SIGMA_SCALE_TIMED = 2.1801
+
 
 # ===========================================================================
 # RePaint pipeline (collaborator model: linear-schedule RePaint UNet, temporal
@@ -180,3 +190,41 @@ REPAINT_SAMPLER = "dps"       # DPS marginally beat MCG in the published numbers
 REPAINT_STEP_SIZE = 0.04
 REPAINT_STRIDE = 1
 REPAINT_DEFAULT_N_DRAWS = 10  # the published evaluation used n = 10 per seed
+
+
+# ===========================================================================
+# Distance/time-aware attention pipeline (collaborator model: observations as
+# cross-attention tokens, penalised by physical distance and by observation age).
+# Additive: does NOT affect the predictors above.
+# ===========================================================================
+
+DISTATTN_WEIGHTS_PATH = _ASSETS_DIR / "distattn_weights.pt"
+# The model's OWN ocean mask (a strict subset of the shared grid: 3749 cells
+# vs 3787). Sampling zeroes land every step, so using the shared mask instead
+# would diverge from how the model was trained.
+DISTATTN_OCEAN_MASK_PATH = _ASSETS_DIR / "distattn_ocean_mask.npy"
+
+# Native model grid, shared with the RePaint pipeline (library is lat x lon 44 x 94).
+DISTATTN_H, DISTATTN_W = 94, 44
+
+# From the checkpoint (epoch 142, val_loss 7.12e-4).
+DISTATTN_BASE_CH = 64
+DISTATTN_TIME_DIM = 256
+DISTATTN_N_HEADS = 4
+DISTATTN_T = 1000
+DISTATTN_OBS_DIM = 5          # [x_norm, y_norm, u, v, age_norm]
+
+# IMPORTANT: this pipeline is trained on RAW physical values (m/s), NOT z-scored,
+# like the RePaint pipeline and unlike CorrDiff/Stream. Do not standardize.
+DISTATTN_NOISE_STD = 0.11618577542245857  # from the checkpoint; scales the latent
+
+# Observation age is tokenised in HOURS: age_norm = (t_end - t_obs) / 3600.
+DISTATTN_AGE_SCALE_SEC = 3600.0
+
+# The model was trained on transects spanning 5 min to 3 h, so ages much beyond
+# ~3 h are out of distribution. predict() warns past this.
+DISTATTN_MAX_AGE_SEC = 10800.0
+
+# Sampling: strided DDPM reverse chain. stride=10 -> 100 network calls.
+DISTATTN_STRIDE = 10
+DISTATTN_DEFAULT_N_DRAWS = 10

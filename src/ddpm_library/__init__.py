@@ -21,6 +21,13 @@ Predictors
   25 h temporal priors. Needs priors.
 * :class:`RePaintUncond` — the same architecture trained without priors; its
   ``predict`` takes observations only.
+* :class:`GP` — Matern-kriging baseline. No checkpoint (it fits per call) and the
+  only model whose ``uncertainty`` is a native posterior sigma rather than an
+  ensemble spread, which makes it the reference point for calibration claims.
+* :class:`DistAttn` — collaborator model: observations enter as cross-attention
+  tokens penalised by distance and by observation AGE. The only predictor that
+  uses the timestamp, so it handles a transect whose readings are not
+  simultaneous. Takes observations only.
 
 ``CorrDiff`` is the recommended default. ``RePaint``/``RePaintUncond`` impose the
 observations at sampling time rather than as trained conditioning, so they are
@@ -43,13 +50,17 @@ from .corrdiff_predict import CorrDiff, predict_corrdiff
 from .repaint_predict import (
     RePaint, RePaintUncond, predict_repaint, predict_repaint_uncond,
 )
+from .distattn_predict import DistAttn, predict_distattn
+from .gp_predict import GP, predict_gp
 from . import metrics
 from .geo import grid_arrays
 
 __all__ = [
     "DDPM", "VCNN", "StreamDDPM", "CorrDiff", "RePaint", "RePaintUncond",
+    "DistAttn", "GP",
     "predict", "predict_vcnn", "predict_stream", "predict_corrdiff",
-    "predict_repaint", "predict_repaint_uncond",
+    "predict_repaint", "predict_repaint_uncond", "predict_distattn",
+    "predict_gp",
     "metrics", "grid_arrays",
 ]
-__version__ = "0.6.0"
+__version__ = "0.7.0"

@@ -221,6 +221,7 @@ class CorrDiff:
         steps: int = C.CORRDIFF_STEPS,
         seed= None,
         calibrate: bool = True,
+        sigma_scale: Optional[float] = None,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Predict the full velocity field and its uncertainty.
 
@@ -249,6 +250,17 @@ class CorrDiff:
             uncertainty is a calibrated 1-sigma. The raw diffusion ensemble is
             under-dispersed (a known property of conditional diffusion models);
             this factor was fitted on held-out data. Set False for the raw spread.
+
+        sigma_scale : float, optional
+            Override the calibration factor. The default assumes the observations
+            were taken SIMULTANEOUSLY. Measurements collected along a track span
+            time -- a 90-cell transect takes about 1.2 h -- and the field moves
+            more than this model's own error in that window, so the default
+            factor leaves the intervals too narrow (about 0.82 coverage at the
+            0.90 level). Pass
+            :data:`~ddpm_library.config.CORRDIFF_SIGMA_SCALE_TIMED` for
+            time-spread observations; it restores 0.91 coverage out-of-sample at
+            the cost of intervals 1.24x wider. Ignored when ``calibrate=False``.
 
         Returns
         -------
@@ -317,7 +329,11 @@ class CorrDiff:
         if n_draws > 1:
             unc_model = draws.std(axis=0) * self.data_std              # scale-only: no offset
             if calibrate:
-                unc_model = unc_model * C.CORRDIFF_SIGMA_SCALE
+                scale = (C.CORRDIFF_SIGMA_SCALE if sigma_scale is None
+                         else float(sigma_scale))
+                if scale <= 0:
+                    raise ValueError(f"sigma_scale must be > 0; got {sigma_scale}")
+                unc_model = unc_model * scale
         else:
             unc_model = np.zeros_like(mean_model)
         mean_model[:, self.land_np] = 0.0

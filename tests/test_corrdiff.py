@@ -10,7 +10,8 @@ import pytest
 from ddpm_library import metrics
 from ddpm_library.config import (
     CORRDIFF_GRID_PATH, CORRDIFF_NOISE_MAX, CORRDIFF_SIGMA_SCALE,
-    CORRDIFF_WEIGHTS_PATH, LAT_MAX, LAT_MIN, LON_MAX, LON_MIN, OCEAN_H, OCEAN_W,
+    CORRDIFF_SIGMA_SCALE_TIMED, CORRDIFF_WEIGHTS_PATH, LAT_MAX, LAT_MIN, LON_MAX,
+    LON_MIN, OCEAN_H, OCEAN_W,
 )
 
 _HAVE_ASSETS = CORRDIFF_WEIGHTS_PATH.exists() and CORRDIFF_GRID_PATH.exists()
@@ -97,6 +98,36 @@ def test_calibration_scaling(model, inputs):
 
 
 @_needs_assets
+def test_sigma_scale_override(model, inputs):
+    """`sigma_scale` must replace the default factor exactly.
+
+    The default was fitted for SIMULTANEOUS observations; measurements spread over
+    a track need CORRDIFF_SIGMA_SCALE_TIMED, so the override has to be exact
+    rather than approximate or the coverage guarantee does not transfer.
+    """
+    obs, priors = inputs
+    ocean = model.ocean_mask > 0.5
+    _, raw = model.predict(obs, priors, n_draws=_DRAWS, steps=_STEPS, seed=11,
+                           calibrate=False)
+    _, timed = model.predict(obs, priors, n_draws=_DRAWS, steps=_STEPS, seed=11,
+                             sigma_scale=CORRDIFF_SIGMA_SCALE_TIMED)
+    assert np.allclose(timed[ocean], raw[ocean] * CORRDIFF_SIGMA_SCALE_TIMED,
+                       rtol=1e-5)
+    # and the timed factor must be the WIDER of the two
+    assert CORRDIFF_SIGMA_SCALE_TIMED > CORRDIFF_SIGMA_SCALE
+
+
+@_needs_assets
+def test_sigma_scale_ignored_when_uncalibrated(model, inputs):
+    obs, priors = inputs
+    _, a = model.predict(obs, priors, n_draws=_DRAWS, steps=_STEPS, seed=11,
+                         calibrate=False)
+    _, b = model.predict(obs, priors, n_draws=_DRAWS, steps=_STEPS, seed=11,
+                         calibrate=False, sigma_scale=99.0)
+    assert np.allclose(a, b)
+
+
+@_needs_assets
 def test_sensor_noise_dial_widens_spread(model, inputs):
     """The dial must monotonically widen the predictive distribution."""
     obs, priors = inputs
@@ -114,6 +145,8 @@ def test_sensor_noise_dial_widens_spread(model, inputs):
     ({"sensor_noise": 10.0}, ValueError),        # outside the trained range
     ({"sensor_noise": -0.1}, ValueError),
     ({"n_draws": 0}, ValueError),
+    ({"sigma_scale": 0.0}, ValueError),        # non-positive scale
+    ({"sigma_scale": -1.0}, ValueError),
 ])
 def test_invalid_arguments(model, inputs, kwargs, exc):
     obs, priors = inputs

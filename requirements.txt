@@ -1,3 +1,4 @@
 torch>=2.0
 numpy
 scipy
+scikit-learn        # GP baseline only (ddpm_library.GP)

@@ -15,6 +15,7 @@ authors = [
 dependencies = [
   "numpy",
   "scipy",
+  "scikit-learn",   # GP baseline only
   "torch>=2.0",
 ]
 keywords = [

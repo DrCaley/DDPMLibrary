@@ -298,7 +298,8 @@ DDPMLibrary/
 │       ├── vcnn_predict.py       # VCNN           │ public classes
 │       ├── stream_predict.py     # StreamDDPM     │
 │       ├── corrdiff_predict.py   # CorrDiff       │
-│       ├── repaint_predict.py    # RePaint, RePaintUncond ─┘
+│       ├── repaint_predict.py    # RePaint, RePaintUncond   │
+│       ├── distattn_predict.py   # DistAttn       ─┘
 │       │
 │       ├── model/                # vendored: DDPM + V-CNN networks
 │       ├── stream/               # vendored: stream-function pipeline
@@ -352,6 +353,14 @@ index). Two observations at the same grid cell get averaged.
 
 ## Changelog
 
+- **0.7.0** — Added `DistAttn`, the distance/time-aware attention model
+  (observations as cross-attention tokens; the only predictor that uses the
+  observation timestamp). `scripts/compare_models.py` gained `--frames-file`
+  and now confines the observation track to the common ocean mask, so every
+  model receives an identical observation set; it also reads the chronological
+  `(T, 2, H, W)` pickle format, which it previously rejected.
+  `scripts/fair_eval_frames.json` lists the 2460 frames held out of training by
+  both split schemes in use across the group's checkpoints.
 - **0.6.0** — The two RePaint models are now separate classes, `RePaint`
   (time-conditioned) and `RePaintUncond`, instead of one class switched by
   `weights_path`; each rejects the other's checkpoint. `RePaintUncond.predict`
@@ -442,6 +451,42 @@ subsample the chain when you need speed; `stride=1` is the published setting.
 
 Training code and the collaborator's own documentation are archived in
 `research/repaint/`.
+
+## DistAttn — observations as attention tokens (v0.7.0)
+
+A collaborator model with a third way of using the observations. `CorrDiff` feeds
+them to the network as input channels; `RePaint` imposes them during sampling;
+this one turns each into a **token the UNet cross-attends to**, with the raw
+attention score penalised by physical distance *and* by how stale the reading is:
+
+```
+attn = (q @ kᵀ)/√d  −  α·distance(query_xy, obs_xy)  −  β·age(obs)
+```
+
+`α` and `β` are learned scalars, zero-initialised, so training decided how much
+each matters rather than it being hard-coded.
+
+```python
+from ddpm_library import DistAttn
+
+model = DistAttn(device="auto")
+mean, uncertainty = model.predict(observations, n_draws=10)
+```
+
+**This is the only predictor that uses the timestamp** in the
+`(lat, lon, unix_t, u, v)` tuple. Each observation is tokenised with its age
+relative to the newest one supplied, so a transect collected over two hours is
+represented as what it is rather than as a simultaneous snapshot. Only the
+*spacing* of the timestamps matters, not their absolute epoch. The model was
+trained on spans of 5 minutes to 3 hours and warns past that.
+
+Takes no `priors`. Works in physical m/s, not z-scored. Uncertainty is the raw
+ensemble spread — like `RePaint` and unlike `CorrDiff`, there is no fitted
+calibration factor, so do not read it as a calibrated 1-sigma.
+
+This model ships its **own ocean mask**, slightly stricter than the shared grid
+(3749 cells vs 3787), because sampling zeroes land at every step and must match
+how it was trained. `scripts/compare_models.py` intersects all model masks.
 
 ## Comparing models
 

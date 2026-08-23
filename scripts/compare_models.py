@@ -36,6 +36,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from ddpm_library import metrics                                    # noqa: E402
 from ddpm_library.config import OCEAN_H, OCEAN_W                    # noqa: E402
 
+from _harness import (common_ocean_mask, frame_pool, load_fields,   # noqa: E402
+                      make_track)
+
 
 # --------------------------------------------------------------------------- #
 # Model registry -- add collaborator models here.
@@ -72,6 +75,18 @@ def _repaint_uncond(device):
     return RePaintUncond(device=device)
 
 
+def _distattn(device):
+    """The collaborator's attention model: observation tokens, distance + age aware."""
+    from ddpm_library import DistAttn
+    return DistAttn(device=device)
+
+
+def _gp(device):
+    """Classical baseline: Matern kriging, no checkpoint, native posterior sigma."""
+    from ddpm_library import GP
+    return GP()
+
+
 MODEL_REGISTRY = {
     # name        factory     needs_priors  predict kwargs
     "vcnn":      (_vcnn,      False, {}),
@@ -80,56 +95,51 @@ MODEL_REGISTRY = {
     "ddpm":      (_ddpm,      False, {}),
     "repaint":   (_repaint,   True,  {"n_draws": 10}),   # collaborator: time-conditioned
     "repaint_uncond": (_repaint_uncond, False, {"n_draws": 10}),  # collaborator: no priors
+    "distattn":  (_distattn,  False, {"n_draws": 10}),   # collaborator: obs tokens
+    "gp":        (_gp,        False, {}),                # classical kriging baseline
 }
 
 
 # --------------------------------------------------------------------------- #
 # Data
 # --------------------------------------------------------------------------- #
-def load_frames(pickle_path, n_frames, lags=(13, 25), n_obs=90, seed=0):
+def load_frames(pickle_path, n_frames, lags=(13, 25), n_obs=90, seed=0,
+                frames_file=None, ocean_mask=None):
     """Yield (truth, observations, priors, observed_mask) tuples from the dataset.
 
     ``truth`` and the priors are (44, 94, 2) m/s in library orientation. Observations
     are drawn along a contiguous pseudo-track so the sparsity pattern resembles a
     vehicle transect rather than scattered points -- a uniformly random sample is a
     much easier problem and would flatter every model equally but unrealistically.
-    """
-    import pickle
 
-    with open(pickle_path, "rb") as f:
-        data = pickle.load(f)
-    # accept either a dict of splits or a raw array
-    arr = data["test"] if isinstance(data, dict) and "test" in data else data
-    arr = np.asarray(arr)
-    if arr.ndim != 4:
-        raise ValueError(f"expected a (T, H, W, 2) array; got shape {arr.shape}")
-    if arr.shape[1:3] != (OCEAN_H, OCEAN_W):
-        if arr.shape[1:3] == (OCEAN_W, OCEAN_H):
-            arr = np.transpose(arr, (0, 2, 1, 3))
-        else:
-            raise ValueError(f"unexpected grid {arr.shape[1:3]}")
+    ``frames_file`` is a JSON file with a ``frames`` list of indices to use instead
+    of sampling at random. Use it to restrict the comparison to frames no model was
+    trained on: the group's checkpoints come from two different pickles whose splits
+    disagree, so either pickle's own test set is training data for half the models
+    (see scripts/fair_eval_frames.json).
+
+    ``ocean_mask`` (44, 94) constrains the track to cells every model calls ocean.
+    Without it the walk can place observations on land, and each model then drops
+    them against its OWN mask -- so the model with the strictest mask silently
+    receives fewer observations than the others, which breaks the like-for-like
+    guarantee above. Always pass the common mask.
+    """
+    arr, _block = load_fields(pickle_path)
 
     from ddpm_library.config import LAT_MIN, LAT_MAX, LON_MIN, LON_MAX
     lats = np.linspace(LAT_MIN, LAT_MAX, OCEAN_H)
     lons = np.linspace(LON_MIN, LON_MAX, OCEAN_W)
 
     rng = np.random.default_rng(seed)
-    lo = max(lags)
-    usable = np.arange(lo, arr.shape[0])
-    picks = rng.choice(usable, size=min(n_frames, len(usable)), replace=False)
+    picks = frame_pool(frames_file, n_frames, arr.shape[0], rng, lo=max(lags))
+    ok = (np.ones((OCEAN_H, OCEAN_W), bool) if ocean_mask is None
+          else np.asarray(ocean_mask, bool))
 
-    for t in sorted(int(x) for x in picks):
+    for t in picks:
         truth = np.nan_to_num(arr[t]).astype(np.float32)
         priors = [np.nan_to_num(arr[t - L]).astype(np.float32) for L in lags]
 
-        # contiguous random-walk track of observation cells
-        r = int(rng.integers(0, OCEAN_H)); c = int(rng.integers(0, OCEAN_W))
-        cells, seen = [], set()
-        while len(cells) < n_obs:
-            if (r, c) not in seen:
-                seen.add((r, c)); cells.append((r, c))
-            r = int(np.clip(r + rng.integers(-1, 2), 0, OCEAN_H - 1))
-            c = int(np.clip(c + rng.integers(-1, 2), 0, OCEAN_W - 1))
+        cells = make_track(ok, n_obs, rng)
         obs, omask = [], np.zeros((OCEAN_H, OCEAN_W), bool)
         for (rr, cc) in cells:
             u, v = truth[rr, cc]
@@ -151,6 +161,13 @@ def main():
     ap.add_argument("--device", default="auto")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--json-out", default=None, help="also write results as JSON")
+    ap.add_argument("--frames-file", default=None,
+                    help="JSON file with a 'frames' index list to draw from. Use "
+                         "scripts/fair_eval_frames.json to restrict the comparison "
+                         "to frames no model in the registry was trained on -- the "
+                         "checkpoints come from two pickles whose splits disagree, "
+                         "so either pickle's own test set is training data for "
+                         "roughly half the models.")
     args = ap.parse_args()
 
     print(f"loading models: {', '.join(args.models)}")
@@ -160,15 +177,13 @@ def main():
         models[name] = (factory(args.device), needs_priors, kwargs)
 
     # Common ocean mask: the intersection over all models that expose one.
-    common = np.ones((OCEAN_H, OCEAN_W), bool)
-    for name, (mdl, _, _) in models.items():
-        if hasattr(mdl, "ocean_mask"):
-            common &= np.asarray(mdl.ocean_mask) > 0.5
+    common = common_ocean_mask(m for m, _, _ in models.values())
     print(f"common ocean mask: {common.sum()} cells "
           f"({common.mean() * 100:.1f}% of the grid)")
 
     frames = list(load_frames(args.pickle, args.n_frames, n_obs=args.n_obs,
-                              seed=args.seed))
+                              seed=args.seed, frames_file=args.frames_file,
+                              ocean_mask=common))
     print(f"scoring {len(frames)} frames\n")
 
     # climatology for the anomaly correlation
@@ -205,8 +220,13 @@ def main():
           "NaN spread-skill /\ncoverage simply means that model reports no uncertainty.")
 
     if args.json_out:
+        # Per-frame values as well as the means: models are scored on the SAME
+        # frames, so differences are paired and a mean gap of a few 1e-4 cannot be
+        # called a win without them. Summary means alone cannot be tested.
+        per_frame = {n: {k: [float(r[k]) for r in rows] for k in keys}
+                     for n, rows in acc.items()}
         Path(args.json_out).write_text(json.dumps(
-            {"summary": summary, "n_frames": len(frames),
+            {"summary": summary, "per_frame": per_frame, "n_frames": len(frames),
              "common_ocean_cells": int(common.sum()), "config": vars(args)}, indent=2))
         print(f"\nwrote {args.json_out}")
 
