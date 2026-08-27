@@ -414,7 +414,13 @@ conformal on held-out frames and verified out-of-sample at 0.8999 coverage again
 model. Pass `n_draws=1` for a single field (uncertainty is then zeros, like the other
 predictors).
 
-## RePaint — guided sampling (v0.6.0)
+## RePaint — Joseph's time-conditioned model (v0.6.0)
+
+*Two models in this library are called "time-conditioned", and they mean
+different things. `RePaint` is conditioned on the ocean state 13 h and 25 h
+earlier (temporal PRIORS). `DistAttn` is conditioned on how old each individual
+measurement is (observation AGE). If someone asks for "the time-conditioned
+model", check which they mean.*
 
 Two collaborator models sharing one architecture. Neither is trained on the
 observations: the sparse measurements are imposed at *sampling* time by a
@@ -452,7 +458,11 @@ subsample the chain when you need speed; `stride=1` is the published setting.
 Training code and the collaborator's own documentation are archived in
 `research/repaint/`.
 
-## DistAttn — observations as attention tokens (v0.7.0)
+## DistAttn — Lin's time-conditioned model (v0.7.0)
+
+*Also known as: the time-conditioned DDPM, the distance-aware / time-conditioning
+model. Searching this repo for "time-conditioned" will otherwise land you on
+`RePaint`, which is time-conditioned in a different sense — see the note below.*
 
 A collaborator model with a third way of using the observations. `CorrDiff` feeds
 them to the network as input channels; `RePaint` imposes them during sampling;

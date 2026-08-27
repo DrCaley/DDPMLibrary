@@ -24,35 +24,38 @@ So the standard benchmark scores a task that cannot physically occur.
 
 ## What it costs
 
-CorrDiff, shipped configuration, 39 frames, identical tracks:
+**These are the corrected-walk numbers** (training-consistent transect,
+`straight_bias=0.75`, ages from the walk's own step count). 40 frames, paired
+seeds, identical tracks across models.
 
-| metric | simultaneous | time-varying | change |
-|---|---|---|---|
-| CRPS | 0.0250 | 0.0276 | **+10.4%** |
-| RMSE | 0.0464 | 0.0504 | +8.6% |
-| RMSE @observed | 0.0060 | 0.0205 | +242% |
-| RMSE @unobserved | 0.0470 | 0.0509 | +8.3% |
-| **coverage @90%** | **0.887** | **0.824** | **−6.3 pts** |
+| model | clean CRPS | stale CRPS | penalty | 95% CI | significant |
+|---|---|---|---|---|---|
+| corrdiff (trained conditioning) | 0.02207 | 0.02631 | **+19.2%** | [+0.00219, +0.00711] | yes |
+| repaint (guided sampling + priors) | 0.02213 | 0.02684 | **+21.3%** | [+0.00288, +0.00697] | yes |
+| repaint_uncond (guided, no priors) | 0.02723 | 0.03320 | **+21.9%** | [+0.00340, +0.00882] | yes |
 
-Replicated at +10.7%, +9.9%, +11.2% across independent runs. Paired bootstrap:
-**+0.00247 CRPS, 95% CI [+0.00104, +0.00394]**. The coverage drop is also
-significant (−0.063, CI [−0.085, −0.043]) and 0.90 falls outside the
-time-varying CI.
+Coverage at the 90% level degrades in step:
 
-**It is not architecture-specific.** Four unrelated methods lose the same amount:
+| model | clean | stale |
+|---|---|---|
+| corrdiff | 0.8964 | 0.8022 |
+| repaint | 0.7358 | 0.6205 |
+| repaint_uncond | 0.7600 | 0.6461 |
 
-| model | CRPS degradation | 95% CI | vs CorrDiff |
-|---|---|---|---|
-| corrdiff (trained conditioning) | +0.00260 | [0.00110, 0.00431] | — |
-| repaint (guided sampling + priors) | +0.00253 | [0.00074, 0.00434] | indistinguishable |
-| repaint_uncond (guided, no priors) | +0.00366 | [0.00081, 0.00703] | indistinguishable |
-| vcnn (plain CNN) | +0.00330 | [0.00140, 0.00541] | — |
+**It is not architecture-specific.** Trained conditioning, guided sampling with
+priors, and guided sampling without priors all lose the same ~20%, and their
+confidence intervals overlap completely. A plain CNN (vcnn) lost a comparable
+amount in earlier runs.
+
+*Earlier runs on the unbiased walk reported ~11%. That walk understated
+observation ages (see caveats) and did not match the training path; the ~20%
+figures above supersede them.*
 
 ## Four attempted fixes, all null
 
 | fix | result | why it failed |
 |---|---|---|
-| **Age conditioning** (DistAttn's mechanism) | +0.00018, CI [−0.0017, +0.0020] | No effect. Hiding the ages entirely costs less than the 0.001 noise floor set by a negative control. DistAttn's apparent robustness comes from fitting observations loosely (0.0201 vs CorrDiff's 0.0060), not from knowing their ages. |
+| **Age conditioning** (DistAttn's mechanism) | +0.00061, CI [−0.00092, +0.00223] | No effect, replicated on the corrected walk. Hiding the ages entirely costs nothing measurable, and DistAttn does not significantly degrade under staleness at all (−0.00029, ns). Its robustness comes from fitting observations loosely (0.0194 vs CorrDiff's 0.0060), not from knowing their ages. |
 | **Sensor-noise dial** | no setting significant | Staleness needs σ≈0.38; the dial's ceiling is 0.10. More fundamentally the dial models **iid** noise while staleness error is spatially coherent (0.60 correlated at 12 cells), so it is the wrong error *structure*, not just the wrong magnitude. |
 | **Fine-tuning on the real observation process** (30 epochs, 7.4 GPU-h) | +10.8% vs +11.2% | Nothing. Loss moved 0.0126 → 0.0124; the v-prediction MSE is dominated by noise-matching and barely registers observation-trust behaviour. |
 | **Correcting observations before inference** | +0.00011, ns | The corrector overfits: 45% better in-sample, **4.2% worse** out-of-sample. It gains +6.8% at a 2 h span but the operationally relevant span is 1.2 h, where there is too little correctable signal. |
@@ -96,29 +99,25 @@ Refitting for simultaneous observations independently reproduces the shipped
 argument on `CorrDiff.predict`. Anyone whose measurements span time — which is
 anyone with real vehicle data — should pass it.
 
-## Two caveats on these numbers
+## Method notes
 
-**1. Ages are understated, so the penalty is a floor.** `make_track` returns the
-sequence of *first* visits, but the walk keeps moving over cells it has already
-seen. It needs ~199 steps to collect 90 distinct cells, so the real elapsed span
-is ~2.6 h, not the 1.18 h the experiments assumed — ages are low by ~2.2×. Every
-conclusion above (direction, significance, which fixes fail) is unaffected, but
-the magnitude corresponds to a ~1.2 h planned transect rather than to this
-particular wandering track. `make_track(..., return_steps=True)` and
-`track_ages(n, steps)` now give the correct timing, and `staleness.py` uses
-them; a mid-run guard raises if the simulation ever becomes a no-op again.
+**Ages come from the walk's step count, not list position.** `make_track`
+returns first visits, but the walk keeps moving over cells it has already seen,
+so cell *k* was reached at step *s_k > k*. Using list position understates
+staleness — on the unbiased walk by ~2.2x, which is why the earlier runs
+reported ~11% instead of ~20%. `make_track(..., return_steps=True)` and
+`track_ages(n, steps)` give the correct timing, `staleness.py` uses them, and a
+mid-run guard raises if the simulation ever becomes a no-op again.
 
-**2. The published numbers used a track that did not match training — now
-fixed in the tool, not yet in the numbers.** Training walks a persistent,
-transect-like path (`straight_bias=0.75`, ~18% revisit overhead, 1.40 h for 90
-cells, radius of gyration 8.4). The runs above used an unbiased walk: 118%
-revisit overhead, 2.60 h actually elapsed, radius of gyration 6.2 — a more
-compact, more wandering path than any planned survey.
+**The evaluation track matches the training track.** `--straight-bias 0.75` is
+the generator the models were trained with: transect-like, ~18% revisit
+overhead, 1.40 h for 90 cells, radius of gyration 8.4 (training measures 8.7).
+`--straight-bias 0.0` reproduces the earlier unbiased-walk runs (118% revisit
+overhead, radius of gyration 6.2) if you need them.
 
-`scripts/staleness.py` now defaults to `--straight-bias 0.75`, so shape, revisit
-rate and age accounting are coherent, and `--straight-bias 0.0` reproduces the
-runs above. **The headline numbers still need one re-run under the new default
-before they go in the paper.**
+**Paired seeds throughout.** Each condition samples identical diffusion noise
+and differs only in the observations. Independent draws leave a ~0.001 CRPS
+Monte-Carlo floor, larger than several of the effects here.
 
 ## Reproducing
 
@@ -133,3 +132,24 @@ python scripts/staleness.py recalibrate --pickle data_raw_chrono.pickle \
 Use **paired seeds** for anything comparing conditions. Independent draws leave a
 ~0.001 CRPS Monte-Carlo floor, larger than several of the effects above; the
 paired design is what made the tight CIs possible.
+
+---
+
+## Related: is CorrDiff more accurate than RePaint?
+
+No. 40 frames, per-frame bootstrap, common mask 3787 cells, standard
+(simultaneous) benchmark:
+
+| metric | corrdiff | repaint | difference | verdict |
+|---|---|---|---|---|
+| CRPS | 0.0232 | 0.0255 | −0.0023 [−0.0056, +0.0010] | tied |
+| RMSE | 0.0434 | 0.0453 | −0.0020 [−0.0076, +0.0038] | tied |
+| RMSE @unobserved | 0.0439 | 0.0459 | −0.0020 [−0.0078, +0.0039] | tied |
+| angle error | 26.37 | 27.36 | −0.99 [−5.37, +4.68] | tied |
+| **eddy recall** | 0.442 | **0.487** | −0.046 [−0.085, −0.006] | **RePaint better** |
+| SSIM | 0.5699 | 0.5693 | +0.0006 [−0.018, +0.019] | tied |
+
+Every accuracy metric ties; the one significant difference favours RePaint.
+Do not claim an accuracy win in either direction. CorrDiff's defensible
+advantages are **calibration** (coverage 0.896 vs 0.736 on clean observations)
+and **speed** (~15 s vs ~4 min per field).

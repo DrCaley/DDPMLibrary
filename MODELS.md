@@ -1,5 +1,7 @@
 # DDPMLibrary — the models
 
+> Which model is whose: **CorrDiff, StreamDDPM, VCNN, DDPM** (Henry) · **RePaint, RePaintUncond** (Joseph) · **DistAttn** (Lin) · **GP** (classical baseline).
+
 Every model returns the same thing, so you can swap between them without
 changing your code:
 
@@ -38,7 +40,9 @@ and `assets/vcnn_weights.pt` (7.4 MB — used as the first guess).
 
 ---
 
-## 2. DistAttn
+## 2. DistAttn — Lin's time-conditioned model
+
+*aka the time-conditioned DDPM / distance-aware time-conditioning model*
 
 Each observation is fed in as a separate item the network can attend to, tagged
 with where it was taken and **how long ago**. It is the only model that reads
@@ -60,7 +64,9 @@ matter, not the absolute clock. Trained on runs of 5 min to 3 h.
 
 ---
 
-## 3. RePaint
+## 3. RePaint — Joseph's time-conditioned model
+
+*conditioned on 13 h/25 h PRIOR FIELDS, not on observation age — different sense of "time-conditioned" from DistAttn above*
 
 A diffusion model that has learned what ocean fields look like in general, then
 nudged during generation so its output passes through your measurements. It also
@@ -147,61 +153,50 @@ mean, _ = DDPM(device="auto").predict(observations, single_step=False)   # full 
 
 # Results
 
-40 frames held out of every model's training data, identical observations
-(90 cells per frame), scored on the common ocean mask (3,749 cells). CRPS and all
-RMSE columns are in m/s.
+All 8 models, 40 frames held out of **every** model's training data, identical
+observations (90-cell track), scored on the common ocean mask (3749 cells).
+CRPS and RMSE in m/s.
 
-### Accuracy
-
-| model | priors? | CRPS ↓ | RMSE ↓ | RMSE @observed ↓ | RMSE @unobserved ↓ | angle error° ↓ |
+| model | priors? | CRPS ↓ | RMSE ↓ | angle° ↓ | spread–skill (→1) | coverage@90 (→0.90) |
 |---|---|---|---|---|---|---|
-| corrdiff | yes | **0.0256** | 0.0470 | 0.0059 | 0.0476 | 28.21 |
-| repaint | yes | 0.0261 | **0.0466** | **0.0008** | **0.0472** | **27.93** |
-| repaint_uncond | no | 0.0349 | 0.0639 | 0.0009 | 0.0646 | 35.02 |
-| distattn | no | 0.0400 | 0.0665 | 0.0202 | 0.0672 | 42.93 |
-| vcnn | no | 0.0446 | 0.0602 | 0.0076 | 0.0609 | 35.63 |
-| stream | yes | *not yet measured* | | | | |
-| ddpm | no | *not yet measured* | | | | |
+| **corrdiff** | yes | **0.0256** | 0.0477 | **28.0** | **1.19** | **0.878** |
+| repaint | yes | 0.0261 | **0.0466** | 27.9 | 0.70 | 0.676 |
+| repaint_uncond | no | 0.0349 | 0.0639 | 35.0 | 0.72 | 0.693 |
+| distattn | no | 0.0401 | 0.0666 | 42.9 | 0.62 | 0.609 |
+| vcnn | no | 0.0446 | 0.0602 | 35.6 | — | — |
+| stream | yes | 0.0451 | 0.0723 | 42.4 | 0.50 | 0.531 |
+| gp | no | 0.0629 | 0.0950 | 48.5 | 0.30 | 0.395 |
+| ddpm | no | 0.0701 | 0.0899 | 54.4 | — | — |
 
-### Uncertainty and structure
-
-| model | spread–skill (→1.0) | coverage @90% (→0.90) | small-scale energy (→1.0) | skilful scale ↓ | eddy recall ↑ | SSIM ↑ | anomaly corr ↑ |
-|---|---|---|---|---|---|---|---|
-| corrdiff | **1.19** | **0.87** | 0.71 | 6.04 | 0.394 | 0.555 | **0.770** |
-| repaint | 0.70 | 0.68 | **0.73** | **4.74** | **0.438** | **0.574** | 0.764 |
-| repaint_uncond | 0.72 | 0.69 | 1.13 | 4.62 | 0.386 | 0.492 | 0.610 |
-| distattn | 0.66 | 0.62 | 0.56 | 9.20 | 0.333 | 0.419 | 0.538 |
-| vcnn | — | — | 0.63 | 6.40 | 0.381 | 0.461 | 0.600 |
-| stream | *not yet measured* | | | | | | |
-| ddpm | *not yet measured* | | | | | | |
-
-VCNN and DDPM report no uncertainty, so spread–skill and coverage are undefined
-for them. CRPS reduces to mean absolute error in that case, so every row is
-still directly comparable.
+VCNN and DDPM report no uncertainty, so spread–skill and coverage are undefined.
+CRPS reduces to mean absolute error in that case, so every row is still directly
+comparable.
 
 ### How to read this
 
-**Compare within the priors groups, not across them.** The three models that get
-the 13 h/25 h history have far more information than the four that don't.
-Joseph's two models isolate the effect exactly — same architecture, same
-training, priors removed: RMSE 0.0466 → 0.0639, i.e. **37% worse**. That gap is
-bigger than any difference between architectures here.
+**Compare within the priors groups.** The models given the 13 h/25 h history have
+far more information than the rest. Joseph's two models isolate the effect
+exactly — same architecture, same training, priors removed: RMSE 0.0466 → 0.0639,
+**37% worse**. That gap is larger than any difference between architectures here.
+Among the observations-only models, **VCNN has the best RMSE** (0.0602 vs 0.0639-0.0950) but **DistAttn has the better CRPS** (0.0401 vs 0.0446), because CRPS credits DistAttn's real uncertainty and VCNN reports none. Which one is 'best' depends on whether you need error bars.
 
-Among the models that use **only observations**, VCNN is the most accurate
-(0.0602 vs 0.0639 and 0.0665).
+**corrdiff and repaint are TIED on accuracy.** Measured directly on 40 frames
+with a per-frame bootstrap: CRPS difference −0.0023, 95% CI [−0.0056, +0.0010];
+RMSE, angle error and SSIM likewise all cross zero. The one significant
+difference goes the other way — **RePaint has better eddy recall** (0.487 vs
+0.442, CI [−0.085, −0.006]). Do not claim CorrDiff is more accurate.
 
-**Only CorrDiff's uncertainty is calibrated.** Its spread–skill of 1.19 and 87%
-coverage are close to the ideal 1.0 and 90%; every other model sits at 0.66–0.72
-and 62–69%, meaning their error bars are too narrow. For those models
-`mean ± 1.645σ` is *not* a 90% interval.
+**CorrDiff's real advantages are calibration and speed.** It is the only model
+whose error bars mean what they say (spread–skill 1.19, coverage 0.878 against a
+0.90 target); everything else is over-confident, including the Gaussian process,
+which is right 39% of the time while claiming 90%. And it runs in ~15 s per field
+versus RePaint's ~4 min.
 
-**Two caveats worth stating.** The CorrDiff/RePaint CRPS gap is 0.0005 m/s on 40
-frames with one seed — treat them as tied on accuracy; CorrDiff's real advantages
-are calibration and being ~15× faster. And this benchmark gave every observation
-the same timestamp, so DistAttn's age mechanism was inactive; its numbers here
-are a floor, and it should do better on real staggered vehicle data.
-
----
+**All of this assumes observations are simultaneous, and they are not.** A real
+vehicle takes over an hour to collect a 90-cell track, which costs every model
+about 20% CRPS and drops CorrDiff's coverage to 0.80. If your measurements span
+time, pass `sigma_scale=CORRDIFF_SIGMA_SCALE_TIMED` to restore calibration. See
+`docs/STALENESS_FINDINGS.md`.
 
 ## Reproducing this
 

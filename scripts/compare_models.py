@@ -194,10 +194,15 @@ def main():
         for name, (mdl, needs_priors, kwargs) in models.items():
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                if needs_priors:
-                    mean, unc = mdl.predict(obs, priors, **kwargs)
-                else:
-                    mean, unc = mdl.predict(obs, **kwargs)
+                # Seed per frame so a re-run reproduces exactly. Deterministic
+                # models (VCNN) take no seed, so only pass it where it exists.
+                import inspect as _i
+                kw = dict(kwargs)
+                if "seed" in _i.signature(mdl.predict).parameters:
+                    kw["seed"] = 4000 + i
+                # NOT `args` -- that name holds the argparse namespace here.
+                call_args = (obs, priors) if needs_priors else (obs,)
+                mean, unc = mdl.predict(*call_args, **kw)
             acc[name].append(metrics.evaluate(
                 mean, unc, truth, ocean_mask=common,
                 observed_mask=omask, climatology=clim))
