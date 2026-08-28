@@ -151,6 +151,112 @@ mean, _ = DDPM(device="auto").predict(observations, single_step=False)   # full 
 
 ---
 
+## 8. GP — the classical baseline
+
+Not anyone's model: standard Gaussian-process regression (Matern kriging), the
+textbook way to reconstruct a field from scattered measurements. It fits a
+smooth surface through the observations and reports how uncertain it is as you
+move away from them, with u and v fitted independently.
+
+It is here for two reasons. It is the method a reader will ask why we didn't
+just use, and it is the honest reference for any *calibration* claim: a GP
+produces its error bars from the model itself, with nothing fitted afterwards to
+make the coverage come out right.
+
+```python
+from ddpm_library import GP
+
+mean, uncertainty = GP().predict(observations)      # no priors, no device needed
+```
+
+**Weights:** none — there is nothing to download. It fits its own
+hyperparameters to your observations on every call, runs on CPU (scikit-learn),
+and takes well under a second. `device` is accepted and ignored.
+
+Cost grows as the cube of the *number of observations*, so a track of a few
+thousand points would need a sparse approximation; at the ~100 observations used
+here that is irrelevant.
+
+### How it works
+
+One assumption, and nothing else: nearby places have similar currents. It is told
+nothing about oceans.
+
+To predict a cell you did not measure, it takes a **weighted average of the cells
+you did** — nearby readings count for more. Close to a measurement that
+measurement dominates, so the reconstruction passes through your observations;
+far from everything the weights all shrink and the answer drifts back toward the
+average of your track. Each of the ~3800 output cells gets its own set of weights,
+computed from its distances to the ~90 observations.
+
+The important thing to be clear about: **there is no training set.** The weighted
+average is over the observations of the single field being reconstructed. The GP
+never sees another ocean field. That is exactly why it is the baseline worth
+reporting — it is the score you get with no learned prior at all, so everything
+the diffusion models earn above it is attributable to having learned what these
+fields look like.
+
+The weights are cleverer than plain distance-weighting in two ways. Illustration
+from a 1-D version of the same kernel, nine observations clustered on the left
+and a wide unmeasured gap on the right (indicative, not output of this module):
+
+```
+query near the observations          query out in the gap
+  distance   weight                    distance   weight
+     0.03    +0.779                       0.23    +0.068
+     0.04    +0.406                       0.23    +0.063
+     0.09    -0.214                       0.30    -0.043
+     0.15    +0.080                       0.36    +0.019
+     0.20    -0.032                       0.42    -0.008
+  weights sum to 1.03                  weights sum to 0.07
+```
+
+**Weights go negative**, so a cluster of nearby readings does not get its vote
+counted several times over and neighbours can oppose each other to sharpen a
+gradient — which is why kriging does not oversmooth the way inverse-distance
+averaging does. And **the weights sum to about 1 where you have data and to about
+0 where you do not**: in the gap the prediction is 7% your measurements and 93%
+"revert to the mean", which is the model correctly reporting that it has nothing
+to go on.
+
+Two numbers are fitted per call, by asking which pair makes your own observations
+least surprising: how far "nearby" reaches (the length scale) and how much to
+trust an individual reading (the noise level). That is the entire fit, it takes
+milliseconds, and it is why there is no checkpoint.
+
+### Why its uncertainty is unreliable
+
+The error bars come out of the same algebra, with no calibration fitted
+afterwards, which is what makes GP the honest reference for a calibration claim.
+But read them with care:
+
+**The variance depends on where you measured, not on what you measured.** Move
+the vehicle along the same track through a violent eddy field and through uniform
+flow and the GP returns *identical* error bars. In fact the whole weight matrix
+can be computed before a single current value is read off the vehicle. So an eddy
+sitting in water the vehicle drove around is invisible twice over: not predicted,
+and not admitted to as a possibility.
+
+(Strictly, that is exact for fixed hyperparameters. Ours are refitted per call
+and `normalize_y=True` rescales by the observations' spread, so the values do
+reach the variance — but only through those two scalars, never through *where*
+the structure actually is.)
+
+That is the mechanism behind its coverage of **0.395 against a 0.90 target** in
+the results table below — the worst in the library. Do not let "it is a GP so its
+sigma is principled" stand unqualified; principled here does not mean calibrated.
+
+Two smaller caveats worth a sentence if we report GP as the baseline:
+
+- **u and v are fitted as two independent problems**, so nothing couples them and
+  the result is not required to conserve water the way the real currents are.
+- Both grid axes are normalised to [0, 1] while the grid is 94x44, so a single
+  isotropic length scale spans about 2.1x more physical distance along longitude
+  than along latitude. Inherited from the research implementation and kept so the
+  numbers match the published run; flagged in a comment in `gp_predict.py`.
+
+---
+
 # Results
 
 All 8 models, 40 frames held out of **every** model's training data, identical
