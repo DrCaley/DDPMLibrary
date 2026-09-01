@@ -303,8 +303,20 @@ def _detect_eddies(field: np.ndarray, ocean: np.ndarray, thresh_factor: float = 
     return out
 
 
+def _rotational_part(field: np.ndarray, ocean: np.ndarray) -> np.ndarray:
+    """Divergence-free component of a (H, W, 2) field, same orientation.
+
+    Imported lazily: the projection lives in the stream sub-package and is pure
+    NumPy, but importing it at module load would couple metrics to that package.
+    """
+    from .stream.conditioning import helmholtz_project
+    m = np.ascontiguousarray(np.transpose(np.asarray(field, np.float32), (2, 1, 0)))
+    r = helmholtz_project(m, np.asarray(ocean).T, max_iters=30, tol=1e-7)
+    return np.ascontiguousarray(np.transpose(r, (2, 1, 0)))
+
+
 def eddy_hit_rate(mean: np.ndarray, truth: np.ndarray, ocean_mask=None,
-                  match_dist: float = 5.0) -> float:
+                  match_dist: float = 5.0, rotational: bool = False) -> float:
     """Fraction of true eddies recovered, matched by position and rotation sense.
 
     Okubo-Weiss identifies rotation-dominated cores in both fields; a true eddy
@@ -315,8 +327,26 @@ def eddy_hit_rate(mean: np.ndarray, truth: np.ndarray, ocean_mask=None,
 
     NaN when the true field contains no eddies (report the mean over frames that
     do, and say how many that was).
+
+    BIAS WARNING -- read before comparing models that differ in divergence.
+    Okubo-Weiss is ``strain^2 - vorticity^2``. Adding a curl-free component to a
+    field CANNOT change its vorticity (the curl of a gradient is identically
+    zero) but it does add strain, so a model that correctly reproduces the
+    divergent part of the flow is pushed out of the rotation-dominated class and
+    loses eddies it never got wrong. A divergence-free model is credited for
+    structure it does not have. Measured on this library: restoring StreamDDPM's
+    divergent component left vorticity unchanged (-0.5%, numerical) while strain
+    rose 1.7% and this metric fell 7.8%, significantly.
+
+    Pass ``rotational=True`` to Helmholtz-project BOTH fields first, so neither
+    side carries divergence and the bias cancels. On a four-way comparison that
+    correction turned one significant result into a tie, one tie into a
+    significant result, and left the ranking otherwise intact -- see
+    ``docs/EDDY_METRIC_BIAS.md``. Report both, or report the corrected one.
     """
     o = _as_ocean(ocean_mask, truth.shape[:2])
+    if rotational:
+        mean, truth = _rotational_part(mean, o), _rotational_part(truth, o)
     te = _detect_eddies(np.asarray(truth, float), o)
     if not te:
         return float("nan")

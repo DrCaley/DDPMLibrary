@@ -260,9 +260,60 @@ Two smaller caveats worth a sentence if we report GP as the baseline:
 
 # Results
 
-All 8 models, 40 frames held out of **every** model's training data, identical
-observations (90-cell track), scored on the common ocean mask (3749 cells).
-CRPS and RMSE in m/s.
+**Two tables, two different tasks. Read the first one.**
+
+The realistic task is a vehicle collecting along a track over two hours, scored
+against the field at the end of the run. The idealised task hands every model
+readings taken simultaneously — which no vehicle can do, and which flatters models
+trained that way. The rankings differ, so the distinction matters.
+
+Both use `benchmark/ocean_bench_v1.npz` frames held out of every model's training
+data, on the common ocean mask (3749 cells).
+
+## Realistic: 2 h collection, time-varying observations
+
+Each model at its own best configuration — CorrDiff gains from discarding readings
+older than 1 h, and the others measurably lose by it, so forcing one observation
+policy on all of them would favour whichever policy was chosen.
+
+**RMSE here is the vector-magnitude convention**, `sqrt(mean(du² + dv²))`. The
+table below it uses the per-component convention, which is smaller by exactly
+`sqrt(2)`. They are not comparable without that factor.
+
+| model | RMSE ↓ | angle (rad) ↓ | eddy ↑ | **eddy_rot** ↑ |
+|---|---|---|---|---|
+| **corrdiff** (1 h cutoff) | **0.0618** | **0.6842** | 0.4308 | 0.4397 |
+| corrdiff (full track) | 0.0673 | 0.7237 | 0.4426 | 0.4454 |
+| distattn | 0.0738 | 0.7875 | 0.3579 | 0.3826 |
+| stream (+divergent) | 0.0908 | 0.9068 | 0.3752 | **0.4559** |
+| vcnn | 0.0791 | 0.8220 | 0.3761 | 0.4196 |
+| gp | 0.1254 | 1.0908 | 0.1430 | 0.1451 |
+
+CorrDiff wins accuracy outright — significantly over DistAttn (−0.0121 RMSE) and
+Stream (−0.0291). **Stream wins rotational structure** while being worst on RMSE,
+a clean perception–distortion split.
+
+**Use `eddy_rot`, not `eddy`.** Okubo–Weiss is `strain² − vorticity²`, so a model
+that correctly reproduces divergence is penalised for structure it got right, and
+a divergence-free model is credited for structure it does not have. `eddy_rot`
+projects both fields first and removes the bias. On these four comparisons the
+correction turned one significant result into a tie and one tie into a significant
+result — see `docs/EDDY_METRIC_BIAS.md`.
+
+Two settings are load-bearing and were wrong by default until 2026-08-31:
+**Stream needs `full_field=True`** (the divergence-free default costs 12.5% RMSE)
+and **`n_draws=20`** (the old default of 1 returned a single noisy draw). Together
+they cost 18.8%. Both defaults are now fixed; numbers published before that date
+understate Stream.
+
+## Idealised: simultaneous observations
+
+The original benchmark, kept because it is what the CRPS and calibration numbers
+were measured on. **A task no vehicle can perform** — treat it as an upper bound,
+not a result. RMSE here is **per-component**, `sqrt(mean over cells and
+components)`, so multiply by `sqrt(2)` to compare with the table above.
+
+40 frames, identical observations (90-cell track), CRPS and RMSE in m/s.
 
 | model | priors? | CRPS ↓ | RMSE ↓ | angle° ↓ | spread–skill (→1) | coverage@90 (→0.90) |
 |---|---|---|---|---|---|---|
@@ -301,9 +352,14 @@ versus RePaint's ~4 min.
 
 **All of this assumes observations are simultaneous, and they are not.** A real
 vehicle takes over an hour to collect a 90-cell track, which costs every model
-about 20% CRPS and drops CorrDiff's coverage to 0.80. If your measurements span
-time, pass `sigma_scale=CORRDIFF_SIGMA_SCALE_TIMED` to restore calibration. See
-`docs/STALENESS_FINDINGS.md`.
+about 20% CRPS and drops CorrDiff's coverage to 0.80. The realistic table above
+supersedes this one for any claim about model ranking.
+
+**Calibration depends on the observation process.** The shipped
+`CORRDIFF_SIGMA_SCALE = 1.6787` assumes simultaneous readings. Measured on 2 h
+collection the correct factor is **3.9142** — intervals using the shipped value
+are 2.3x too narrow. At the 1 h cutoff it is 2.2006, essentially the shipped
+`CORRDIFF_SIGMA_SCALE_TIMED`. See `docs/OBSERVATION_AGE_AND_STRUCTURE.md`.
 
 ## Reproducing this
 

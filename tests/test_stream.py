@@ -104,9 +104,15 @@ def test_stream_invalid_sampler_raises(stream):
 
 
 def test_stream_full_field_adds_divergent(stream):
-    """full_field=True changes the mean (adds VCNN's divergent part), same shape."""
+    """full_field=True changes the mean (adds VCNN's divergent part), same shape.
+
+    Both arms pass full_field explicitly. This test previously relied on the
+    default being False; the default is now True, and a test should not depend on
+    the value of the flag it is testing.
+    """
     obs, pri = _obs(), _priors()
-    m_off, u_off = stream.predict(obs, pri, n_draws=2, inference_steps=5, seed=1)
+    m_off, u_off = stream.predict(obs, pri, n_draws=2, inference_steps=5, seed=1,
+                                  full_field=False)
     m_on, u_on = stream.predict(obs, pri, n_draws=2, inference_steps=5, seed=1,
                                 full_field=True)
     assert m_on.shape == (44, 94, 2)

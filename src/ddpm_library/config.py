@@ -90,8 +90,11 @@ STREAM_NOISE_TYPE = "div_free"
 STREAM_SAMPLER = "dpmpp"
 STREAM_DPMPP_STEPS = 6            # sweet spot: peak calibration, diverse draws
 STREAM_DDPM_STEPS = 100          # the proven ancestral config
-STREAM_DEFAULT_N_DRAWS = 1   # 1 -> single field (uncertainty zeros, like DDPM/VCNN);
-                             # >1 -> real ensemble spread in the uncertainty output.
+STREAM_DEFAULT_N_DRAWS = 20  # matches CorrDiff; every other diffusion predictor
+                             # here defaults to 10-20. This was 1, which returned a
+                             # single noisy draw as the "mean" and zeros for the
+                             # uncertainty -- measured at +3.8% RMSE versus 20 draws.
+                             # Set 1 explicitly for the fast single-field path.
 STREAM_UNCERTAINTY_N_DRAWS = 40   # used by the uncertainty-map scripts
 
 # The stream-function + div-free-noise scheme uses central differences, whose

@@ -1,0 +1,16 @@
+  shipped defaults (n_draws=1, divfree)
+  n_draws=20, divfree
+  n_draws=1, +divergent
+  best (n_draws=20, +divergent)
+
+configuration                                RMSE  angle_rms
+shipped defaults (n_draws=1, divfree)      0.1079     1.0670
+n_draws=20, divfree                        0.1038     1.0195
+n_draws=1, +divergent                      0.0953     0.9766
+best (n_draws=20, +divergent)              0.0908     0.9068
+
+cost of the shipped defaults, paired vs best:
+  rmse_vector     +0.01704  CI [+0.01296, +0.02164]  (+18.8%)  significant
+  angle_rms_rad   +0.16017  CI [+0.11841, +0.19995]  (+17.7%)  significant
+
+wrote results_stream_defaults.pt

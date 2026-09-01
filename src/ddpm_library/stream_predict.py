@@ -228,7 +228,7 @@ class StreamDDPM:
         inference_steps: Optional[int] = None,
         seed=None,
         project_priors: bool = True,
-        full_field: bool = False,
+        full_field: bool = True,
         smooth_uncertainty: bool = True,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Predict the full velocity field from scattered observations + priors.
@@ -256,13 +256,23 @@ class StreamDDPM:
             matching how the training data was built. Keep on for real-world
             (not-quite-div-free) priors; the field the model outputs is
             divergence-free regardless of this flag.
-        full_field : bool, default False
-            If True, add back the irrotational (divergent) component the
-            stream-function model cannot represent, via Helmholtz recombination:
-            the divergence-free field from this model + the curl-free part
-            extracted from a VCNN prediction. Improves accuracy against the raw
-            (non-div-free) ROMS field while keeping this model's ensemble
-            uncertainty. Off by default (the pure model is exactly divergence-free).
+        full_field : bool, default True
+            Add back the irrotational (divergent) component the stream-function
+            model cannot represent, via Helmholtz recombination: the
+            divergence-free field from this model + the curl-free part extracted
+            from a VCNN prediction.
+
+            This DEFAULTED TO FALSE until 2026-08-31, which made the output
+            exactly divergence-free. Real surface currents are not: geostrophic
+            flow is divergence-free but ageostrophic flow is not, Ekman transport
+            produces genuine convergence and divergence, and on this dataset the
+            divergent component carries 14% of the field's energy. Measured cost
+            of the old default: +12.5% RMSE and +11% angle, both significant.
+            Every number published with the old default understates this model.
+
+            Set False only to inspect the pure divergence-free field. Note that
+            doing so also flatters this model on Okubo-Weiss eddy metrics, which
+            reward artificially low strain -- see metrics.eddy_hit_rate.
         smooth_uncertainty : bool, default True
             Apply a light nan-aware Gaussian smooth to the uncertainty field.
             Removes the grid-scale (checkerboard) numerical artifact from the
@@ -361,7 +371,7 @@ def predict_stream(
     inference_steps: Optional[int] = None,
     seed= None,
     project_priors: bool = True,
-    full_field: bool = False,
+    full_field: bool = True,
     smooth_uncertainty: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Stateless wrapper around :meth:`StreamDDPM.predict` (lazy singleton)."""
