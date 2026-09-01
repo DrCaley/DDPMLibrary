@@ -1,0 +1,19 @@
+  scored full_field=False
+  scored full_field=True
+
+config                 RMSE  angle_rms   RMS div    eddy
+divfree_only         0.1038     1.0195   0.00663  0.4071
+plus_divergent       0.0908     0.9068   0.00906  0.3752
+TRUTH                     —          —   0.00870       —
+
+paired, plus_divergent - divfree_only:
+  rmse_vector     -0.01294  CI [-0.01775, -0.00860]  significant
+  angle_rms_rad   -0.11273  CI [-0.16120, -0.06284]  significant
+  eddy_hit_rate   -0.03189  CI [-0.05945, -0.00583]  significant
+
+reference points:
+  Stream's divergence-free floor          0.0613
+  floor removed entirely (quadrature)     0.0839
+  corrdiff (with priors) on this bench    0.0665
+
+wrote /workspace/DDPMLibrary/benchmark/results_stream_fullfield.pt

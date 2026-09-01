@@ -1,0 +1,42 @@
+  scored corrdiff (1h cutoff)
+  scored corrdiff (full track)
+  scored distattn
+  scored stream (+divergent)
+  scored stream (divfree only)
+  scored vcnn
+  scored gp
+
+model                        RMSE  angle_rms    eddy  eddy_rot
+corrdiff (1h cutoff)       0.0618     0.6842  0.4308    0.4397
+corrdiff (full track)      0.0673     0.7237  0.4426    0.4454
+distattn                   0.0738     0.7875  0.3579    0.3826
+stream (+divergent)        0.0908     0.9068  0.3752    0.4559
+stream (divfree only)      0.1038     1.0195  0.4071    0.4594
+vcnn                       0.0791     0.8220  0.3761    0.4196
+gp                         0.1254     1.0908  0.1430    0.1451
+
+corrdiff (1h cutoff)  vs  distattn:
+  rmse_vector     -0.01205  CI [-0.01965, -0.00494]  significant
+  angle_rms_rad   -0.10329  CI [-0.17864, -0.02782]  significant
+  eddy            +0.07289  CI [+0.02796, +0.11739]  significant
+  eddy_rot        +0.05704  CI [+0.00710, +0.10741]  significant
+
+corrdiff (1h cutoff)  vs  stream (+divergent):
+  rmse_vector     -0.02908  CI [-0.03597, -0.02231]  significant
+  angle_rms_rad   -0.22264  CI [-0.27698, -0.16877]  significant
+  eddy            +0.05559  CI [+0.01060, +0.09874]  significant
+  eddy_rot        -0.01626  CI [-0.05656, +0.02449]  TIED
+
+stream (+divergent)  vs  stream (divfree only):
+  rmse_vector     -0.01294  CI [-0.01775, -0.00860]  significant
+  angle_rms_rad   -0.11273  CI [-0.16120, -0.06284]  significant
+  eddy            -0.03189  CI [-0.05945, -0.00583]  significant
+  eddy_rot        -0.00347  CI [-0.02331, +0.01568]  TIED
+
+distattn  vs  stream (+divergent):
+  rmse_vector     -0.01702  CI [-0.02552, -0.00831]  significant
+  angle_rms_rad   -0.11934  CI [-0.18976, -0.04750]  significant
+  eddy            -0.01730  CI [-0.06392, +0.02860]  TIED
+  eddy_rot        -0.07331  CI [-0.12844, -0.01743]  significant
+
+wrote /workspace/DDPMLibrary/benchmark/results_final_comparison.pt
