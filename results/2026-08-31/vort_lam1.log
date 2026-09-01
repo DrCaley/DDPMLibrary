@@ -1,0 +1,17 @@
+device=cuda  CorrDiff v2  obs_timing=simultaneous  mean=vcnn  noise_max=0.1  noise_cond=True  dist=True  smoke=False
+cond_ch=11  total_cond=15  signal_std=1.1874  train=11639
+params=14,967,588
+warm-started from /workspace/DDPMLibrary/src/ddpm_library/assets/corrdiff_weights.pt (epoch 199, obs_timing=simultaneous)
+epoch   0  loss 0.01634  base 0.01263  vort 0.00371  (lambda=1, contrib 22.7%)  (348s, 300 batches)
+epoch   1  loss 0.01630  base 0.01256  vort 0.00374  (lambda=1, contrib 22.9%)  (349s, 300 batches)
+epoch   2  loss 0.01696  base 0.01328  vort 0.00368  (lambda=1, contrib 21.7%)  (347s, 300 batches)
+epoch   3  loss 0.01668  base 0.01289  vort 0.00378  (lambda=1, contrib 22.7%)  (347s, 300 batches)
+epoch   4  loss 0.01676  base 0.01314  vort 0.00362  (lambda=1, contrib 21.6%)  (346s, 300 batches)
+  >> saved epoch 4
+epoch   5  loss 0.01645  base 0.01284  vort 0.00361  (lambda=1, contrib 21.9%)  (392s, 300 batches)
+epoch   6  loss 0.01627  base 0.01267  vort 0.00361  (lambda=1, contrib 22.2%)  (475s, 300 batches)
+epoch   7  loss 0.01657  base 0.01296  vort 0.00361  (lambda=1, contrib 21.8%)  (525s, 300 batches)
+epoch   8  loss 0.01639  base 0.01282  vort 0.00357  (lambda=1, contrib 21.8%)  (526s, 300 batches)
+epoch   9  loss 0.01634  base 0.01272  vort 0.00362  (lambda=1, contrib 22.2%)  (474s, 300 batches)
+  >> saved epoch 9
+done.

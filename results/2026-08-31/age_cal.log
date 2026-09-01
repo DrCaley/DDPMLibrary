@@ -1,0 +1,40 @@
+  corrdiff+priors@0.5h           50 readings/case
+  corrdiff+priors@0.75h          75 readings/case
+  corrdiff+priors@1.0h          100 readings/case
+  corrdiff+priors@1.25h         125 readings/case
+  corrdiff+priors@1.5h          150 readings/case
+  corrdiff+priors@full          200 readings/case
+  distattn@full                 200 readings/case
+  vcnn@full                     200 readings/case
+  gp@full                       200 readings/case
+
+config                      readings      RMSE   angle_rms  eddy-ish
+corrdiff+priors@0.5h              50    0.0639      0.7071          
+corrdiff+priors@0.75h             75    0.0631      0.7158          
+corrdiff+priors@1.0h             100    0.0618      0.6842          
+corrdiff+priors@1.25h            125    0.0628      0.6980          
+corrdiff+priors@1.5h             150    0.0636      0.7091          
+corrdiff+priors@full             200    0.0673      0.7237          
+distattn@full                    200    0.0738      0.7875          
+vcnn@full                        200    0.0791      0.8220          
+gp@full                          200    0.1254      1.0908          
+
+paired vs the full 2 h track (negative = discarding helps):
+  corrdiff+priors@0.5h      -0.0034  CI [-0.0089, +0.0018]  (-5.1%)  tied
+  corrdiff+priors@0.75h     -0.0042  CI [-0.0094, +0.0010]  (-6.2%)  tied
+  corrdiff+priors@1.0h      -0.0055  CI [-0.0102, -0.0010]  (-8.2%)  significant
+  corrdiff+priors@1.25h     -0.0045  CI [-0.0087, -0.0006]  (-6.7%)  significant
+  corrdiff+priors@1.5h      -0.0037  CI [-0.0073, -0.0004]  (-5.6%)  significant
+
+  best cutoff: corrdiff+priors@1.0h  (RMSE 0.0618)
+
+conformal refit (level 0.9, z=1.6449), fit on 20 cases, verify on 20:
+  config                       factor   cov fit  cov held out     width
+  corrdiff+priors@0.5h         1.7504    0.9000        0.8992    0.1573
+  corrdiff+priors@0.75h        1.9571    0.9000        0.9123    0.1625
+  corrdiff+priors@1.0h         2.2006    0.9000        0.9200    0.1742
+  corrdiff+priors@1.25h        2.4834    0.9000        0.9154    0.1852
+  corrdiff+priors@1.5h         2.8729    0.9000        0.9225    0.2074
+  corrdiff+priors@full         3.9142    0.9000        0.9232    0.2643
+
+wrote /workspace/DDPMLibrary/benchmark/results_age_calibration.pt

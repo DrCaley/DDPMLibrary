@@ -18,3 +18,8 @@ venv/
 # Build artifacts
 build/
 dist/
+
+# docx build deps for docs/loss_doc
+docs/loss_doc/node_modules/
+docs/loss_doc/package-lock.json
+docs/loss_doc/*.pdf

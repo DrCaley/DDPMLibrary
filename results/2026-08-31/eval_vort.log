@@ -1,0 +1,28 @@
+  scored baseline
+  scored lam0
+  scored lamV
+
+checkpoint        RMSE   angle_rms   vort_RMSE  eddy_recall
+baseline        0.0673      0.7237     0.01273       0.4426
+lam0            0.0674      0.7195     0.01279       0.4450
+lamV            0.0669      0.7190     0.01282       0.4576
+
+lamV - lam0, paired over 40 cases:
+  rmse_vector     -0.00050  CI [-0.00128, +0.00022]  TIED
+  angle_rms_rad   -0.00051  CI [-0.00657, +0.00545]  TIED
+  vorticity_rmse  +0.00003  CI [-0.00002, +0.00009]  TIED   (n=40)
+  eddy_hit_rate   +0.01259  CI [-0.00037, +0.02665]  TIED   (n=40)
+
+lam0 - baseline, paired over 40 cases:
+  rmse_vector     +0.00007  CI [-0.00034, +0.00050]  TIED
+  angle_rms_rad   -0.00421  CI [-0.01033, +0.00129]  TIED
+  vorticity_rmse  +0.00006  CI [+0.00001, +0.00011]  significant   (n=40)
+  eddy_hit_rate   +0.00238  CI [-0.01255, +0.01664]  TIED   (n=40)
+
+lamV - baseline, paired over 40 cases:
+  rmse_vector     -0.00043  CI [-0.00123, +0.00044]  TIED
+  angle_rms_rad   -0.00472  CI [-0.01048, +0.00082]  TIED
+  vorticity_rmse  +0.00009  CI [+0.00002, +0.00017]  significant   (n=40)
+  eddy_hit_rate   +0.01497  CI [+0.00067, +0.03016]  significant   (n=40)
+
+wrote /workspace/DDPMLibrary/benchmark/results_vorticity.pt
