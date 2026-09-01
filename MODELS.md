@@ -290,15 +290,22 @@ table below it uses the per-component convention, which is smaller by exactly
 | gp | 0.1254 | 1.0908 | 0.1430 | 0.1451 |
 
 CorrDiff wins accuracy outright — significantly over DistAttn (−0.0121 RMSE) and
-Stream (−0.0291). **Stream wins rotational structure** while being worst on RMSE,
-a clean perception–distortion split.
+Stream (−0.0291). That is the solid result here.
 
-**Use `eddy_rot`, not `eddy`.** Okubo–Weiss is `strain² − vorticity²`, so a model
-that correctly reproduces divergence is penalised for structure it got right, and
-a divergence-free model is credited for structure it does not have. `eddy_rot`
-projects both fields first and removes the bias. On these four comparisons the
-correction turned one significant result into a tie and one tie into a significant
-result — see `docs/EDDY_METRIC_BIAS.md`.
+Stream *appears* to win rotational structure, but that finding is withdrawn: it is
+best under one Helmholtz projection and fourth under another, and nothing decides
+between them. See the eddy caveat below.
+
+**Treat both eddy columns with suspicion.** Okubo–Weiss is
+`strain² − vorticity²`, so a model that correctly reproduces divergence is
+penalised for structure it got right, and a divergence-free model is credited for
+structure it does not have — the raw `eddy` column is confounded wherever
+divergence differs between models, which here means anything involving Stream.
+`eddy_rot` projects both fields first to remove that, but the Helmholtz
+decomposition on a coastline is boundary-condition dependent and two reasonable
+choices reorder the models entirely. **Neither eddy column should carry a claim on
+its own.** Use vorticity RMSE, which needs no decomposition. See
+`docs/EDDY_METRIC_BIAS.md`.
 
 Two settings are load-bearing and were wrong by default until 2026-08-31:
 **Stream needs `full_field=True`** (the divergence-free default costs 12.5% RMSE)

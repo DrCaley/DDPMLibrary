@@ -338,11 +338,18 @@ def eddy_hit_rate(mean: np.ndarray, truth: np.ndarray, ocean_mask=None,
     divergent component left vorticity unchanged (-0.5%, numerical) while strain
     rose 1.7% and this metric fell 7.8%, significantly.
 
-    Pass ``rotational=True`` to Helmholtz-project BOTH fields first, so neither
-    side carries divergence and the bias cancels. On a four-way comparison that
-    correction turned one significant result into a tie, one tie into a
-    significant result, and left the ranking otherwise intact -- see
-    ``docs/EDDY_METRIC_BIAS.md``. Report both, or report the corrected one.
+    ``rotational=True`` projects BOTH fields before detecting, which removes the
+    bias -- but DO NOT TRUST ITS ABSOLUTE VALUES OR RANKINGS. The Helmholtz
+    decomposition on a bounded domain is not unique without boundary conditions,
+    and this coastline is 30% irregular. The FFT projection used here (periodic
+    BCs) and an exact Poisson projection (Neumann BCs) produce OPPOSITE model
+    rankings on the same predictions -- Stream is best under one and fourth under
+    the other. The flag is kept because the invariance property is real and
+    testable, not because the numbers are settled.
+
+    Practical guidance: the bias is proven, the correction is not. Compare models
+    of SIMILAR divergence on the raw metric, or report vorticity RMSE, which needs
+    no decomposition and no boundary condition. See ``docs/EDDY_METRIC_BIAS.md``.
     """
     o = _as_ocean(ocean_mask, truth.shape[:2])
     if rotational:
