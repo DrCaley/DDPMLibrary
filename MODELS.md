@@ -280,17 +280,27 @@ policy on all of them would favour whichever policy was chosen.
 table below it uses the per-component convention, which is smaller by exactly
 `sqrt(2)`. They are not comparable without that factor.
 
-| model | RMSE ↓ | angle (rad) ↓ | eddy ↑ | **eddy_rot** ↑ |
+| model | RMSE ↓ | angle (rad) ↓ | eddy ↑ | eddy_rot ↑ |
 |---|---|---|---|---|
-| **corrdiff** (1 h cutoff) | **0.0618** | **0.6842** | 0.4308 | 0.4397 |
+| **repaint** (1 h cutoff) | **0.0595** | 0.7039 | 0.4295 | 0.4072 |
+| **corrdiff** (1 h cutoff) | 0.0618 | **0.6842** | 0.4308 | 0.4397 |
 | corrdiff (full track) | 0.0673 | 0.7237 | 0.4426 | 0.4454 |
+| repaint (full track) | 0.0691 | 0.7581 | 0.4451 | 0.4203 |
 | distattn | 0.0738 | 0.7875 | 0.3579 | 0.3826 |
-| stream (+divergent) | 0.0908 | 0.9068 | 0.3752 | **0.4559** |
 | vcnn | 0.0791 | 0.8220 | 0.3761 | 0.4196 |
+| repaint_uncond | 0.0793 | 0.8168 | 0.3915 | 0.3992 |
+| stream (+divergent) | 0.0908 | 0.9068 | 0.3752 | 0.4559 |
 | gp | 0.1254 | 1.0908 | 0.1430 | 0.1451 |
 
-CorrDiff wins accuracy outright — significantly over DistAttn (−0.0121 RMSE) and
-Stream (−0.0291). That is the solid result here.
+**RePaint and CorrDiff are TIED** (−0.00228, CI [−0.00800, +0.00279]), with RePaint
+nominally ahead on RMSE and CorrDiff nominally ahead on angle. The same tie held on
+the idealised benchmark, so it replicates on the realistic task. CorrDiff's
+defensible advantages over RePaint are **calibration** (coverage 0.878 vs 0.676) and
+**speed** (~15 s vs ~4 min per field), not accuracy — do not claim otherwise.
+
+CorrDiff beats DistAttn (−0.0121 RMSE) and Stream (−0.0291) significantly, and is
+tied with RePaint. The 1 h discard helps both prior-carrying diffusion models —
+CorrDiff by 8% and RePaint by 14% — and measurably hurts the models without priors.
 
 Stream *appears* to win rotational structure, but that finding is withdrawn: it is
 best under one Helmholtz projection and fourth under another, and nothing decides
