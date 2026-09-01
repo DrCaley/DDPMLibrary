@@ -86,9 +86,11 @@ structural term to CorrDiff" the obvious untested lever, and Seth's new eddy met
 made it timely.
 
 **Vorticity only, deliberately not curl+div.** On 60 held-out frames this field's RMS
-divergence is **48% of its RMS vorticity** — it is emphatically not divergence-free, so
-a divergence penalty would push the model away from real dynamics. (See §4: that is
-also why Stream is the weakest model.) Vorticity is what an eddy is, and what the eddy
+divergence is **48% of its RMS vorticity**, and the divergent component carries **14% of
+the field's energy** — it is not divergence-free, so a divergence penalty would push the
+model away from real dynamics. (Those two numbers measure different things: the first
+is a ratio of derivatives, the second of energy. The second is the one that bounds how
+much a divergence-free model can lose.) Vorticity is what an eddy is, and what the eddy
 metrics measure.
 
 Fine-tuned from the shipped checkpoint, 3000 gradient steps, λ = 1.0 (the term
@@ -147,8 +149,20 @@ frames.
 
 A *perfect* Stream would beat CorrDiff by 8%. The constraint spends nearly the whole
 error budget before the model does anything. This is a provable ceiling, not a tuning
-result, and 59% of Stream's measured error is the train/eval mismatch rather than
-model quality. Report Stream with this stated, or not at all.
+result.
+
+Be careful how much of Stream's gap this explains. The floor is 59% of its RMSE but
+only 35% of its *squared* error, and removing the floor entirely would leave
+`sqrt(0.1039^2 - 0.0613^2) = 0.0839` — still worse than CorrDiff's 0.0665. So the
+ceiling is real and worth removing, but it is not on its own why Stream loses. Report
+Stream with the floor stated, or not at all.
+
+The physics backs the diagnosis: geostrophic flow is divergence-free while ageostrophic
+flow is irrotational but not solenoidal, and Ekman transport produces genuine
+convergence and divergence at the surface. Fablet et al. (2024, arXiv:2211.13059)
+independently report the ageostrophic component at ~47% for satellite surface currents,
+matching our 48% derivative ratio. A divergence-free model of surface currents is
+assuming purely geostrophic flow.
 
 ---
 
