@@ -40,10 +40,11 @@ applied here. Getting that wrong silently produces plausible but wrong fields.
 Uncertainty
 -----------
 The sampler is stochastic, so ``n_draws > 1`` gives a real per-cell ensemble
-spread. Like :class:`RePaint` and unlike :class:`CorrDiff` there is no fitted
-calibration factor for this model, so the returned ``uncertainty`` is the RAW
-ensemble standard deviation and is expected to be under-dispersed. Do not read
-it as a calibrated 1-sigma; fit a scale factor on held-out data first.
+spread. The returned ``uncertainty`` is the RAW ensemble standard deviation and
+is under-dispersed (raw coverage 0.737 at the 0.90 level on the realistic
+benchmark). Multiply by :data:`~ddpm_library.config.DISTATTN_SIGMA_SCALE_TIMED`
+(1.621, split-conformal, held-out coverage 0.898) for calibrated intervals on
+time-varying collection.
 
 Cost
 ----

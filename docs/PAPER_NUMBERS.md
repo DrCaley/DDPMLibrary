@@ -39,9 +39,33 @@ measurable (controlled experiment, §vorticity). No-physics + temporal priors wi
 - CorrDiff vs Stream: −0.0291, CI [−0.0360, −0.0223] — **significant**
 - DistAttn vs Stream: −0.0170, CI [−0.0255, −0.0083] — **significant**
 
-Uncertainty columns (CRPS, coverage, conformal factors for all three):
-`benchmark/results_uncertainty_final.pt` — being computed at time of writing;
-numbers to be inserted from that file's `summary` dict.
+## Uncertainty (the paper's core claim)
+
+Same benchmark. Each model then gets its **own** split-conformal factor (fitted on
+20 cases, coverage verified on the held-out 20) — "calibrated" alone is cheap, so
+the fair comparison is **sharpness at matched calibration**: who needs the
+narrowest intervals to be honest.
+
+| model | CRPS ↓ | coverage, raw (→0.90) | own factor | coverage, calibrated | interval width ↓ |
+|---|---|---|---|---|---|
+| **CorrDiff** (timed factor) | **0.0242** | **0.908** | **1.009** | 0.920 | **0.174** |
+| DistAttn | 0.0296 | 0.737 | 1.621 | 0.898 | 0.178 |
+| Stream | 0.0400 | 0.502 | 3.141 | 0.903 | 0.255 |
+
+All three pairwise CRPS gaps significant (corrdiff−distattn −0.0054
+CI [−0.0095, −0.0020]; corrdiff−stream −0.0158; distattn−stream −0.0103).
+
+The row to build the paragraph on: **CorrDiff arrives calibrated** — raw coverage
+0.908 against the 0.90 target, and its residual conformal factor is 1.009, i.e.
+the shipped timed factor is already right to within 1%. DistAttn's intervals need
+inflating 1.6× and Stream's 3.1× before they are honest, and even then Stream's
+honest intervals are 46% wider than CorrDiff's. DistAttn calibrates to a
+respectable width (0.178) — its problem is accuracy, not spread shape.
+
+Fitted factors are shipped as `DISTATTN_SIGMA_SCALE_TIMED = 1.621` and
+`STREAM_SIGMA_SCALE_TIMED = 3.141` in `config.py`.
+→ `results_uncertainty_final.pt` (all four arms re-verified locally from the
+saved arrays)
 
 "Best configuration" is itself a measured protocol, not a favour to CorrDiff: the
 1 h discard significantly *hurts* the prior-less models (DistAttn +15.5%, GP
@@ -51,9 +75,11 @@ numbers to be inserted from that file's `summary` dict.
 
 **1. Discard observations older than 1 h (models with temporal priors only).**
 −8.2% RMSE, CI [−0.0102, −0.0010], and 34% narrower intervals at matched 90%
-coverage. A genuine interior optimum — 0.75 h and 1.25 h are both worse. Confirmed
-on every prior-carrying model tested (CorrDiff −8%, RePaint −14%) and harmful to
-every prior-less one. Controlled for spatial extent with matched-count controls.
+coverage. A genuine interior optimum — 0.75 h and 1.25 h are both worse. CorrDiff
+gains −8% and RePaint −14%; Stream, though it carries priors, is **tied** (+1.0%,
+ns) — the discard is safe for it but not beneficial, so Stream runs the full
+track. Prior-less models are actively harmed (DistAttn +15.5%, GP +10.9%).
+Controlled for spatial extent with matched-count controls.
 → `results_age_calibration.pt`
 
 **2. Calibration depends on the observation process.** The conformal factor fitted
@@ -104,7 +130,7 @@ needs no decomposition. This applies equally to the collaborator's eddy-IoU.
 | temporal priors (13/25 h) | yes | no | yes |
 | observation timestamps used | no | yes (age tokens; age-weighted loss never trained) | no |
 | inference | 20 draws, 50 DDIM steps, ~15 s/field | 10 draws, stride 10 | 20 draws, dpmpp, + magnitude net + Helmholtz recombination |
-| calibration | split conformal, factor 2.1801 (timed) | none shipped | none shipped |
+| calibration | split conformal, 2.1801 (timed) | 1.621 (fitted here) | 3.141 (fitted here) |
 
 Loss equations, weights, and references: `docs/loss_doc/loss_functions.docx`.
 

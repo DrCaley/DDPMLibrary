@@ -95,7 +95,13 @@ STREAM_DEFAULT_N_DRAWS = 20  # matches CorrDiff; every other diffusion predictor
                              # single noisy draw as the "mean" and zeros for the
                              # uncertainty -- measured at +3.8% RMSE versus 20 draws.
                              # Set 1 explicitly for the fast single-field path.
-STREAM_UNCERTAINTY_N_DRAWS = 40   # used by the uncertainty-map scripts
+STREAM_UNCERTAINTY_N_DRAWS = 40
+
+#: Split-conformal factor for Stream's raw ensemble spread (full_field=True,
+#: n_draws=20) on 2 h time-varying collection (fitted on 20 benchmark cases,
+#: held-out coverage 0.903 at the 0.90 level). Multiply the returned uncertainty
+#: by this for calibrated intervals.
+STREAM_SIGMA_SCALE_TIMED = 3.141   # used by the uncertainty-map scripts
 
 # The stream-function + div-free-noise scheme uses central differences, whose
 # Fourier symbol vanishes at the Nyquist frequency, so grid-scale (checkerboard)
@@ -230,4 +236,9 @@ DISTATTN_MAX_AGE_SEC = 10800.0
 
 # Sampling: strided DDPM reverse chain. stride=10 -> 100 network calls.
 DISTATTN_STRIDE = 10
+
+#: Split-conformal factor for DistAttn's raw ensemble spread on 2 h time-varying
+#: collection (fitted on 20 benchmark cases, held-out coverage 0.898 at the 0.90
+#: level). Multiply the returned uncertainty by this for calibrated intervals.
+DISTATTN_SIGMA_SCALE_TIMED = 1.621
 DISTATTN_DEFAULT_N_DRAWS = 10
