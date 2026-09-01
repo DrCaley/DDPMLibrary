@@ -29,6 +29,9 @@ from ddpm_library.config import LAT_MIN, LAT_MAX, LON_MIN, LON_MAX   # noqa: E40
 from _harness import load_fields, frame_pool, interp_at, lookback_ok  # noqa: E402
 
 PICKLE = "/Users/henryw/Documents/DiffusionSummer2026/Datasets/pickles/data_raw_chrono.pickle"
+# Replication support: --seed/--out/--exclude let a second, independent set be
+# generated with the same protocol. --exclude takes an existing benchmark whose
+# target frames are removed from the pool, so the two sets share no frames.
 FRAMES_FILE = Path(__file__).resolve().parents[1] / "scripts" / "fair_eval_frames.json"
 N_CASES, SEED = 40, 20260829
 N_READINGS = 200
@@ -65,6 +68,15 @@ def dubins_path(ok, rng):
 
 
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--seed", type=int, default=SEED)
+    ap.add_argument("--out", default=None)
+    ap.add_argument("--exclude", default=None,
+                    help="existing benchmark .npz whose frames to exclude")
+    args = ap.parse_args()
+    seed = args.seed
+
     arr, block = load_fields(PICKLE)
     # Score the INTERSECTION of every model's own ocean mask. Shipping one
     # model's mask would charge the others for cells they call land, and the
@@ -77,8 +89,11 @@ def main():
     lats = np.linspace(LAT_MIN, LAT_MAX, 44)
     lons = np.linspace(LON_MIN, LON_MAX, 94)
 
-    rng = np.random.default_rng(SEED)
-    picks = frame_pool(FRAMES_FILE, N_CASES * 2, arr.shape[0], rng)
+    rng = np.random.default_rng(seed)
+    picks = frame_pool(FRAMES_FILE, N_CASES * 3, arr.shape[0], rng)
+    if args.exclude:
+        banned = set(int(x) for x in np.load(args.exclude)["frame_index"])
+        picks = [t for t in picks if t not in banned]
 
     obs_all, truth_all, priors_all, frames, spans, drifts = [], [], [], [], [], []
     for t in picks:
@@ -107,7 +122,8 @@ def main():
     if len(frames) < N_CASES:
         raise RuntimeError(f"only {len(frames)} usable cases; widen the frame pool")
 
-    out = Path(__file__).resolve().parent / "ocean_bench_v1.npz"
+    out = (Path(args.out) if args.out
+           else Path(__file__).resolve().parent / "ocean_bench_v1.npz")
     np.savez_compressed(
         out,
         observations=np.asarray(obs_all, np.float64),      # (C, N, 5)
@@ -118,7 +134,7 @@ def main():
         prior_lags_hours=np.asarray(LAGS),
         collection_span_hours=np.asarray(spans),
         reading_drift_ms=np.asarray(drifts),
-        seed=SEED, n_readings=N_READINGS, cell_metres=CELL_M,
+        seed=seed, n_readings=N_READINGS, cell_metres=CELL_M,
         vehicle_speed_ms=SPEED_MS, turn_radius_metres=TURN_RADIUS_CELLS * CELL_M,
     )
     spd = np.linalg.norm(np.asarray(truth_all)[:, ocean], axis=-1)

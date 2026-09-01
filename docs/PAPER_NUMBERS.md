@@ -64,6 +64,12 @@ respectable width (0.178) — its problem is accuracy, not spread shape.
 
 Fitted factors are shipped as `DISTATTN_SIGMA_SCALE_TIMED = 1.621` and
 `STREAM_SIGMA_SCALE_TIMED = 3.141` in `config.py`.
+
+Stated choice for the methods section: CRPS is computed from (mean, σ) under a
+Gaussian assumption, identically for every model, rather than from raw ensembles
+(whose member counts differ, 10–20). The v1 table computed CorrDiff's CRPS on its
+calibrated σ and the others on raw σ; the replication set recomputes all models on
+calibrated σ, which is the apples-to-apples version.
 → `results_uncertainty_final.pt` (all four arms re-verified locally from the
 saved arrays)
 
@@ -146,6 +152,10 @@ Loss equations, weights, and references: `docs/loss_doc/loss_functions.docx`.
   dependent.
 - **"Stream's constraint explains its whole gap."** It explains the ceiling
   (0.0613 of 0.1039); the rest is the model.
+- **Model blending.** Tested and closed: at each model's best configuration,
+  corrdiff+distattn gains nothing (+0.0002, 68% of held-out splits — noise) and
+  corrdiff+repaint is borderline (+0.0031, 94% of splits, interval crosses zero).
+  Not a result.
 
 ## Simple framing for Stream (recommendation)
 
