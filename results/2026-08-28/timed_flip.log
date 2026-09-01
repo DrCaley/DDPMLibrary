@@ -1,0 +1,63 @@
+  frame 1/40  span 1.31 h
+  frame 2/40  span 1.51 h
+  frame 3/40  span 1.34 h
+  frame 4/40  span 1.23 h
+  frame 5/40  span 1.35 h
+  frame 6/40  span 1.35 h
+  frame 7/40  span 1.25 h
+  frame 8/40  span 1.51 h
+  frame 9/40  span 1.37 h
+  frame 10/40  span 1.31 h
+  frame 11/40  span 1.54 h
+  frame 12/40  span 1.31 h
+  frame 13/40  span 1.42 h
+  frame 14/40  span 1.34 h
+  frame 15/40  span 1.47 h
+  frame 16/40  span 1.34 h
+  frame 17/40  span 1.31 h
+  frame 18/40  span 1.38 h
+  frame 19/40  span 1.25 h
+  frame 20/40  span 1.76 h
+  frame 21/40  span 1.53 h
+  frame 22/40  span 1.27 h
+  frame 23/40  span 1.37 h
+  frame 24/40  span 1.23 h
+  frame 25/40  span 1.22 h
+  frame 26/40  span 1.21 h
+  frame 27/40  span 1.47 h
+  frame 28/40  span 1.34 h
+  frame 29/40  span 1.33 h
+  frame 30/40  span 1.54 h
+  frame 31/40  span 1.43 h
+  frame 32/40  span 1.29 h
+  frame 33/40  span 1.22 h
+  frame 34/40  span 1.29 h
+  frame 35/40  span 1.63 h
+  frame 36/40  span 1.27 h
+  frame 37/40  span 1.76 h
+  frame 38/40  span 1.38 h
+  frame 39/40  span 1.30 h
+
+39 frames | transect walk | mask 3749 | mean collection span 1.38 h | no priors | paired seeds
+
+config                         rmse_vec              ang_rms
+                          mean / median        mean / median
+------------------------------------------------------------
+corrdiff/clean         0.0764 /   0.0590     0.8188 /   0.6889
+corrdiff/timed         0.0793 /   0.0711     0.8399 /   0.7368
+distattn/clean         0.0851 /   0.0818     0.9666 /   0.9113
+distattn/timed         0.0840 /   0.0745     0.9480 /   0.8920
+
+--- cost of staggered collection, per model (paired) ---
+   rmse_vec  corrdiff  +0.0029  CI [-0.0017, +0.0071]  (+3.8%)  not significant
+   rmse_vec  distattn  -0.0011  CI [-0.0044, +0.0020]  (-1.3%)  not significant
+   ang_rms   corrdiff  +0.0211  CI [-0.0162, +0.0575]  (+2.6%)  not significant
+   ang_rms   distattn  -0.0186  CI [-0.0540, +0.0172]  (-1.9%)  not significant
+
+--- corrdiff vs distattn under each observation process ---
+   rmse_vec  clean : -0.0087  CI [-0.0153, -0.0026]  -> corrdiff, significant
+   rmse_vec  timed : -0.0048  CI [-0.0109, +0.0014]  -> corrdiff, tied
+   ang_rms   clean : -0.1478  CI [-0.2189, -0.0754]  -> corrdiff, significant
+   ang_rms   timed : -0.1081  CI [-0.1838, -0.0354]  -> corrdiff, significant
+
+wrote /workspace/DDPMLibrary/timed_flip.json

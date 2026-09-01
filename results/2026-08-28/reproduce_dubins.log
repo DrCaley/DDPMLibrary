@@ -1,0 +1,87 @@
+  frame 1/40  span 1.99 h  138 distinct cells  drift 0.0099
+  frame 2/40  span 1.99 h  110 distinct cells  drift 0.0062
+  frame 3/40  span 1.99 h  146 distinct cells  drift 0.0161
+  frame 4/40  span 1.99 h  133 distinct cells  drift 0.0149
+  frame 5/40  span 1.99 h  123 distinct cells  drift 0.0181
+  frame 6/40  span 1.99 h  93 distinct cells  drift 0.0264
+  frame 7/40  span 1.99 h  116 distinct cells  drift 0.0208
+  frame 8/40  span 1.99 h  140 distinct cells  drift 0.0132
+  frame 9/40  span 1.99 h  109 distinct cells  drift 0.0232
+  frame 10/40  span 1.99 h  122 distinct cells  drift 0.0230
+  frame 11/40  span 1.99 h  131 distinct cells  drift 0.0120
+  frame 12/40  span 1.99 h  128 distinct cells  drift 0.0314
+  frame 13/40  span 1.99 h  142 distinct cells  drift 0.0126
+  frame 14/40  span 1.99 h  149 distinct cells  drift 0.0456
+  frame 15/40  span 1.99 h  103 distinct cells  drift 0.0420
+  frame 16/40  span 1.99 h  123 distinct cells  drift 0.0623
+  frame 17/40  span 1.99 h  138 distinct cells  drift 0.0384
+  frame 18/40  span 1.99 h  135 distinct cells  drift 0.0350
+  frame 19/40  span 1.99 h  102 distinct cells  drift 0.0157
+  frame 20/40  span 1.99 h  144 distinct cells  drift 0.0508
+  frame 21/40  span 1.99 h  128 distinct cells  drift 0.0394
+  frame 22/40  span 1.99 h  129 distinct cells  drift 0.0348
+  frame 23/40  span 1.99 h  119 distinct cells  drift 0.0048
+  frame 24/40  span 1.99 h  114 distinct cells  drift 0.0199
+  frame 25/40  span 1.99 h  115 distinct cells  drift 0.0274
+  frame 26/40  span 1.99 h  134 distinct cells  drift 0.0634
+  frame 27/40  span 1.99 h  100 distinct cells  drift 0.0343
+  frame 28/40  span 1.99 h  117 distinct cells  drift 0.0170
+  frame 29/40  span 1.99 h  123 distinct cells  drift 0.0136
+  frame 30/40  span 1.99 h  123 distinct cells  drift 0.0274
+  frame 31/40  span 1.99 h  109 distinct cells  drift 0.0524
+  frame 32/40  span 1.99 h  138 distinct cells  drift 0.0164
+  frame 33/40  span 1.99 h  107 distinct cells  drift 0.0163
+  frame 34/40  span 1.99 h  124 distinct cells  drift 0.0338
+  frame 35/40  span 1.99 h  125 distinct cells  drift 0.0207
+  frame 36/40  span 1.99 h  121 distinct cells  drift 0.0909
+  frame 37/40  span 1.99 h  113 distinct cells  drift 0.0244
+  frame 38/40  span 1.99 h  118 distinct cells  drift 0.0194
+  frame 39/40  span 1.99 h  141 distinct cells  drift 0.0344
+
+39 frames | Dubins track, 200 readings over 1.99 h | 124 distinct cells | mask 3749 | mean reading drift 0.0284 m/s
+
+config                                rmse_vec           rmse_comp            ang_mean             ang_rms
+                                 mean / median       mean / median       mean / median       mean / median
+----------------------------------------------------------------------------------------------------------
+corrdiff+priors|simultaneous    0.0621 /   0.0513    0.0439 /   0.0363    0.4584 /   0.3603    0.7177 /   0.6362
+corrdiff+priors|timed         0.0757 /   0.0712    0.0535 /   0.0503    0.5429 /   0.4326    0.8052 /   0.7169
+corrdiff-priors|simultaneous    0.0773 /   0.0698    0.0547 /   0.0493    0.5927 /   0.5461    0.8878 /   0.8641
+corrdiff-priors|timed         0.0904 /   0.0797    0.0639 /   0.0563    0.6658 /   0.5590    0.9587 /   0.9278
+distattn|simultaneous         0.0856 /   0.0775    0.0605 /   0.0548    0.6809 /   0.5917    0.9820 /   0.9362
+distattn|timed                0.0868 /   0.0866    0.0614 /   0.0613    0.6778 /   0.5632    0.9626 /   0.9023
+stream-priors|simultaneous    0.1088 /   0.0881    0.0769 /   0.0623    0.7991 /   0.7007    1.0853 /   1.0651
+stream-priors|timed           0.1178 /   0.1114    0.0833 /   0.0788    0.8787 /   0.8551    1.1704 /   1.1679
+gp|simultaneous               0.1237 /   0.1189    0.0875 /   0.0841    0.8287 /   0.7838    1.1145 /   1.0200
+gp|timed                      0.1338 /   0.1338    0.0946 /   0.0946    0.9210 /   0.8314    1.1845 /   1.0857
+
+--- cost of the real observation process (timed - simultaneous), paired ---
+ [rmse_vec]
+   corrdiff+priors  +0.0136  CI [+0.0080, +0.0197]  (+21.9%)  significant
+   corrdiff-priors  +0.0131  CI [+0.0080, +0.0186]  (+16.9%)  significant
+   distattn         +0.0012  CI [-0.0027, +0.0053]  (+1.4%)  not significant
+   stream-priors    +0.0090  CI [+0.0040, +0.0139]  (+8.3%)  significant
+   gp               +0.0101  CI [+0.0041, +0.0169]  (+8.2%)  significant
+ [ang_rms]
+   corrdiff+priors  +0.0876  CI [+0.0323, +0.1485]  (+12.2%)  significant
+   corrdiff-priors  +0.0709  CI [+0.0078, +0.1392]  (+8.0%)  significant
+   distattn         -0.0194  CI [-0.0547, +0.0144]  (-2.0%)  not significant
+   stream-priors    +0.0851  CI [+0.0156, +0.1661]  (+7.8%)  significant
+   gp               +0.0700  CI [+0.0190, +0.1309]  (+6.3%)  significant
+
+--- ranking under each observation process (lower is better) ---
+   rmse_vec  simultaneous : corrdiff+priors < corrdiff-priors < distattn < stream-priors < gp
+   rmse_vec  timed        : corrdiff+priors < distattn < corrdiff-priors < stream-priors < gp
+   ang_rms   simultaneous : corrdiff+priors < corrdiff-priors < distattn < stream-priors < gp
+   ang_rms   timed        : corrdiff+priors < corrdiff-priors < distattn < stream-priors < gp
+
+--- corrdiff vs distattn, paired ---
+   rmse_vec  corrdiff-priors  simultaneous : -0.0083  CI [-0.0150, -0.0013]  -> corrdiff, significant
+   rmse_vec  corrdiff-priors  timed        : +0.0036  CI [-0.0040, +0.0110]  -> DISTATTN, tied
+   rmse_vec  corrdiff+priors  simultaneous : -0.0235  CI [-0.0293, -0.0177]  -> corrdiff, significant
+   rmse_vec  corrdiff+priors  timed        : -0.0111  CI [-0.0174, -0.0052]  -> corrdiff, significant
+   ang_rms   corrdiff-priors  simultaneous : -0.0942  CI [-0.1746, -0.0150]  -> corrdiff, significant
+   ang_rms   corrdiff-priors  timed        : -0.0039  CI [-0.0896, +0.0746]  -> corrdiff, tied
+   ang_rms   corrdiff+priors  simultaneous : -0.2643  CI [-0.3384, -0.1965]  -> corrdiff, significant
+   ang_rms   corrdiff+priors  timed        : -0.1574  CI [-0.2523, -0.0679]  -> corrdiff, significant
+
+wrote /workspace/DDPMLibrary/reproduce_dubins.json

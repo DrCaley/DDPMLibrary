@@ -1,0 +1,70 @@
+  frame 1/40
+  frame 2/40
+  frame 3/40
+  frame 4/40
+  frame 5/40
+  frame 6/40
+  frame 7/40
+  frame 8/40
+  frame 9/40
+  frame 10/40
+  frame 11/40
+  frame 12/40
+  frame 13/40
+  frame 14/40
+  frame 15/40
+  frame 16/40
+  frame 17/40
+  frame 18/40
+  frame 19/40
+  frame 20/40
+  frame 21/40
+  frame 22/40
+  frame 23/40
+  frame 24/40
+  frame 25/40
+  frame 26/40
+  frame 27/40
+  frame 28/40
+  frame 29/40
+  frame 30/40
+  frame 31/40
+  frame 32/40
+  frame 33/40
+  frame 34/40
+  frame 35/40
+  frame 36/40
+  frame 37/40
+  frame 38/40
+  frame 39/40
+  frame 40/40
+
+40 frames | SCATTERED observations (90 random ocean cells) | no priors | mask 3749
+
+model                rmse_vec          rmse_comp           ang_mean            ang_rms
+                mean / median      mean / median      mean / median      mean / median
+--------------------------------------------------------------------------------------
+corrdiff     0.0380 /  0.0367   0.0269 /  0.0260   0.3230 /  0.3009   0.5757 /  0.5318
+stream       0.0860 /  0.0767   0.0608 /  0.0543   0.5558 /  0.5301   0.8194 /  0.8409
+distattn     0.0517 /  0.0505   0.0365 /  0.0357   0.4325 /  0.4091   0.7078 /  0.7056
+gp           0.0315 /  0.0308   0.0223 /  0.0218   0.2182 /  0.1992   0.4886 /  0.4661
+
+--- transect -> scattered, paired change per model (negative = easier) ---
+ [rmse_vec]
+   corrdiff  -0.0385  CI [-0.0498, -0.0285]  (-50.3% of its transect score)
+   stream    -0.0237  CI [-0.0350, -0.0141]  (-21.6% of its transect score)
+   distattn  -0.0331  CI [-0.0441, -0.0230]  (-39.1% of its transect score)
+   gp        -0.0992  CI [-0.1153, -0.0842]  (-75.9% of its transect score)
+ [ang_rms]
+   corrdiff  -0.2509  CI [-0.3465, -0.1647]  (-30.4% of its transect score)
+   stream    -0.2699  CI [-0.3313, -0.2121]  (-24.8% of its transect score)
+   distattn  -0.2590  CI [-0.3555, -0.1681]  (-26.8% of its transect score)
+   gp        -0.6386  CI [-0.7634, -0.5251]  (-56.7% of its transect score)
+
+--- corrdiff vs distattn under each observation pattern (no priors) ---
+   rmse_vec  transect : -0.0082  CI [-0.0147, -0.0021]  -> corrdiff, significant
+   rmse_vec  scattered: -0.0136  CI [-0.0175, -0.0100]  -> corrdiff, significant
+   ang_rms   transect : -0.1402  CI [-0.2112, -0.0681]  -> corrdiff, significant
+   ang_rms   scattered: -0.1321  CI [-0.1767, -0.0897]  -> corrdiff, significant
+
+wrote /workspace/DDPMLibrary/obs_pattern.json

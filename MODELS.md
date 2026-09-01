@@ -1,6 +1,6 @@
 # DDPMLibrary — the models
 
-> Which model is whose: **CorrDiff, StreamDDPM, VCNN, DDPM** (Henry) · **RePaint, RePaintUncond** (Joseph) · **DistAttn** (Lin) · **GP** (classical baseline).
+> Which model is whose: **CorrDiff, StreamDDPM, VCNN, DDPM** (Henry) · **RePaint, RePaintUncond** (Joseph) · **DistAttn** (Sam's distance attention, Lin's time conditioning) · **GP** (classical baseline).
 
 Every model returns the same thing, so you can swap between them without
 changing your code:
@@ -40,9 +40,10 @@ and `assets/vcnn_weights.pt` (7.4 MB — used as the first guess).
 
 ---
 
-## 2. DistAttn — Lin's time-conditioned model
+## 2. DistAttn — Sam's attention model with Lin's time conditioning
 
-*aka the time-conditioned DDPM / distance-aware time-conditioning model*
+*aka the time-conditioned DDPM / distance-aware time-conditioning model.*
+*Sam wrote the distance-attention base; Lin added the time awareness.*
 
 Each observation is fed in as a separate item the network can attend to, tagged
 with where it was taken and **how long ago**. It is the only model that reads

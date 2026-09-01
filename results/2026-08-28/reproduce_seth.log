@@ -1,0 +1,78 @@
+  frame 1/40
+  frame 2/40
+  frame 3/40
+  frame 4/40
+  frame 5/40
+  frame 6/40
+  frame 7/40
+  frame 8/40
+  frame 9/40
+  frame 10/40
+  frame 11/40
+  frame 12/40
+  frame 13/40
+  frame 14/40
+  frame 15/40
+  frame 16/40
+  frame 17/40
+  frame 18/40
+  frame 19/40
+  frame 20/40
+  frame 21/40
+  frame 22/40
+  frame 23/40
+  frame 24/40
+  frame 25/40
+  frame 26/40
+  frame 27/40
+  frame 28/40
+  frame 29/40
+  frame 30/40
+  frame 31/40
+  frame 32/40
+  frame 33/40
+  frame 34/40
+  frame 35/40
+  frame 36/40
+  frame 37/40
+  frame 38/40
+  frame 39/40
+  frame 40/40
+
+40 frames | transect walk (straight_bias=0.75) | common mask 3749 cells | paired seeds
+
+config                      rmse_vec          rmse_comp           ang_mean            ang_rms
+                       mean / median      mean / median      mean / median      mean / median
+---------------------------------------------------------------------------------------------
+corrdiff+priors     0.0618 /  0.0540   0.0437 /  0.0382   0.4469 /  0.3914   0.7214 /  0.6091
+corrdiff-priors     0.0766 /  0.0614   0.0541 /  0.0434   0.5319 /  0.4324   0.8266 /  0.6944
+stream+priors       0.0984 /  0.0869   0.0696 /  0.0614   0.7150 /  0.6758   1.0170 /  0.9641
+stream-priors       0.1098 /  0.0974   0.0776 /  0.0689   0.7898 /  0.7911   1.0893 /  1.1149
+distattn            0.0848 /  0.0779   0.0599 /  0.0551   0.6502 /  0.5666   0.9668 /  0.9141
+gp                  0.1307 /  0.1223   0.0924 /  0.0865   0.8477 /  0.6997   1.1271 /  0.9806
+
+--- vs his medians (rmse_vec, ang_rms) ---
+config             ours med   his med   ratio    ours med   his med   ratio
+distattn             0.0779     0.047    1.66      0.9141      0.67    1.36
+stream-priors        0.0974     0.076    1.28      1.1149      1.01    1.10
+corrdiff-priors      0.0614     0.050    1.23      0.6944      0.72    0.96
+gp                   0.1223     0.092    1.33      0.9806      1.15    0.85
+
+--- paired differences, 95% CI over frames ---
+ cost of withholding priors
+   corrdiff-priors - corrdiff+priors [rmse_vec]: +0.0148  CI [+0.0092, +0.0212]  significant=yes
+   stream-priors - stream+priors [rmse_vec]: +0.0114  CI [+0.0062, +0.0172]  significant=yes
+ corrdiff vs distattn, HIS configuration (no priors)
+   corrdiff-priors - distattn [rmse_vec]: -0.0082  CI [-0.0147, -0.0021]  significant=yes
+ corrdiff vs distattn, OUR configuration (priors passed)
+   corrdiff+priors - distattn [rmse_vec]: -0.0230  CI [-0.0297, -0.0166]  significant=yes
+
+ cost of withholding priors
+   corrdiff-priors - corrdiff+priors [ang_rms]: +0.1052  CI [+0.0597, +0.1587]  significant=yes
+   stream-priors - stream+priors [ang_rms]: +0.0723  CI [+0.0280, +0.1221]  significant=yes
+ corrdiff vs distattn, HIS configuration (no priors)
+   corrdiff-priors - distattn [ang_rms]: -0.1402  CI [-0.2112, -0.0681]  significant=yes
+ corrdiff vs distattn, OUR configuration (priors passed)
+   corrdiff+priors - distattn [ang_rms]: -0.2454  CI [-0.3131, -0.1798]  significant=yes
+
+wrote /workspace/DDPMLibrary/reproduce_seth.json

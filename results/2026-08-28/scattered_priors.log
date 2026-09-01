@@ -1,0 +1,57 @@
+  frame 1/40
+  frame 2/40
+  frame 3/40
+  frame 4/40
+  frame 5/40
+  frame 6/40
+  frame 7/40
+  frame 8/40
+  frame 9/40
+  frame 10/40
+  frame 11/40
+  frame 12/40
+  frame 13/40
+  frame 14/40
+  frame 15/40
+  frame 16/40
+  frame 17/40
+  frame 18/40
+  frame 19/40
+  frame 20/40
+  frame 21/40
+  frame 22/40
+  frame 23/40
+  frame 24/40
+  frame 25/40
+  frame 26/40
+  frame 27/40
+  frame 28/40
+  frame 29/40
+  frame 30/40
+  frame 31/40
+  frame 32/40
+  frame 33/40
+  frame 34/40
+  frame 35/40
+  frame 36/40
+  frame 37/40
+  frame 38/40
+  frame 39/40
+  frame 40/40
+
+40 frames | SCATTERED observations | mask 3749
+
+config                           rmse_vec          rmse_comp           ang_mean            ang_rms
+                            mean / median      mean / median      mean / median      mean / median
+--------------------------------------------------------------------------------------------------
+corrdiff +priors         0.0350 /  0.0343   0.0248 /  0.0243   0.2899 /  0.2666   0.5198 /  0.4973
+corrdiff -priors         0.0380 /  0.0367   0.0269 /  0.0260   0.3230 /  0.3009   0.5757 /  0.5318
+gp                       0.0315 /  0.0308   0.0223 /  0.0218   0.2182 /  0.1992   0.4886 /  0.4661
+
+--- paired differences, 95% CI over frames ---
+   rmse_vec  corrdiff +priors - gp: +0.0035  CI [+0.0006, +0.0063]  significant
+   rmse_vec  corrdiff +priors - corrdiff -priors: -0.0030  CI [-0.0043, -0.0018]  significant
+   ang_rms   corrdiff +priors - gp: +0.0312  CI [-0.0216, +0.0876]  NOT significant (tied)
+   ang_rms   corrdiff +priors - corrdiff -priors: -0.0560  CI [-0.0787, -0.0330]  significant
+
+wrote /workspace/DDPMLibrary/scattered_priors.json

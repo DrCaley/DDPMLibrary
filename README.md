@@ -458,7 +458,7 @@ subsample the chain when you need speed; `stride=1` is the published setting.
 Training code and the collaborator's own documentation are archived in
 `research/repaint/`.
 
-## DistAttn — Lin's time-conditioned model (v0.7.0)
+## DistAttn — Sam's attention model, Lin's time conditioning (v0.7.0)
 
 *Also known as: the time-conditioned DDPM, the distance-aware / time-conditioning
 model. Searching this repo for "time-conditioned" will otherwise land you on
