@@ -1,7 +1,7 @@
 # Two experiments: discarding stale readings, and a structural loss term
 
 Both run on `benchmark/ocean_bench_v1.npz` (40 frozen cases, 2 h Dubins track,
-time-varying observations, 3749 scored cells, seed 20260830). Raw predictions,
+time-varying observations, 3749 scored cells, seed 20260829). Raw predictions,
 per-case metrics and the fitted factors are in `benchmark/results_age_calibration.pt`
 and `benchmark/results_vorticity.pt`; both stamp the benchmark's MD5, so every
 number here can be re-derived without re-running a model.
@@ -181,6 +181,6 @@ assuming purely geostrophic flow.
 bash benchmark/run_all.sh          # both experiments, sequential, ~3.5 h on one GPU
 ```
 
-Deterministic given the frozen benchmark and seed 20260830. The fine-tune arms
+Deterministic given the frozen benchmark and seed 20260829. The fine-tune arms
 additionally require `--deterministic_data`, without which the two arms see different
 batches and the comparison is meaningless.

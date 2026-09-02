@@ -2,7 +2,7 @@
 
 One page to write the paper from. Every number is from the frozen benchmark
 (`benchmark/ocean_bench_v1.npz`, 40 cases, 2 h Dubins-style track, time-varying
-observations, 3749 scored cells, seed 20260830) unless marked otherwise, and every
+observations, 3749 scored cells, seed 20260829) unless marked otherwise, and every
 table traces to a `.pt` in `benchmark/` stamped with the benchmark's MD5.
 
 RMSE convention throughout: **vector magnitude**, `sqrt(mean(du² + dv²))`. The
