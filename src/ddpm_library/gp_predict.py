@@ -29,7 +29,8 @@ Cost
 ----
 Exact GP inference, no sparse approximation: the observation count (order 100) is
 far below the prediction count (~3800), so the O(n^3) factorisation is trivial.
-Typically well under a second per field, but it scales cubically in the NUMBER OF
+A few seconds per field (measured 7.0 s on one test box -- the per-call
+hyperparameter refit dominates), and it scales cubically in the NUMBER OF
 OBSERVATIONS -- a track of several thousand cells would need a sparse
 approximation instead.
 

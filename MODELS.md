@@ -81,7 +81,8 @@ mean, uncertainty = model.predict(observations, priors, n_draws=10)
 mean, uncertainty = model.predict(observations, priors, n_draws=10, stride=10)  # ~10x faster
 ```
 
-Slow: about 4 minutes per field on a GPU at the default settings.
+Slow: measured 49.7 s per field at stride 5 / 10 draws on a Titan Xp; stride 1
+(the library default) costs about 5x that.
 
 **Weights:** `assets/repaint_timecond_weights.pt` (171 MB).
 
@@ -172,7 +173,8 @@ mean, uncertainty = GP().predict(observations)      # no priors, no device neede
 
 **Weights:** none — there is nothing to download. It fits its own
 hyperparameters to your observations on every call, runs on CPU (scikit-learn),
-and takes well under a second. `device` is accepted and ignored.
+and takes a few seconds (measured 7.0 s per field on one test box; it refits
+hyperparameters every call). `device` is accepted and ignored.
 
 Cost grows as the cube of the *number of observations*, so a track of a few
 thousand points would need a sparse approximation; at the ~100 observations used
@@ -296,7 +298,8 @@ table below it uses the per-component convention, which is smaller by exactly
 nominally ahead on RMSE and CorrDiff nominally ahead on angle. The same tie held on
 the idealised benchmark, so it replicates on the realistic task. CorrDiff's
 defensible advantages over RePaint are **calibration** (coverage 0.878 vs 0.676) and
-**speed** (~15 s vs ~4 min per field), not accuracy — do not claim otherwise.
+**speed** (measured 1.2 vs 49.7 s per field, Titan Xp), not accuracy — do not
+claim otherwise.
 
 CorrDiff beats DistAttn (−0.0121 RMSE) and Stream (−0.0291) significantly, and is
 tied with RePaint. The 1 h discard helps both prior-carrying diffusion models —
@@ -364,8 +367,8 @@ difference goes the other way — **RePaint has better eddy recall** (0.487 vs
 **CorrDiff's real advantages are calibration and speed.** It is the only model
 whose error bars mean what they say (spread–skill 1.19, coverage 0.878 against a
 0.90 target); everything else is over-confident, including the Gaussian process,
-which is right 39% of the time while claiming 90%. And it runs in ~15 s per field
-versus RePaint's ~4 min.
+which is right 39% of the time while claiming 90%. And it runs in a measured
+1.2 s per field versus RePaint's 49.7 s (Titan Xp, paper configurations).
 
 **All of this assumes observations are simultaneous, and they are not.** A real
 vehicle takes over an hour to collect a 90-cell track, which costs every model

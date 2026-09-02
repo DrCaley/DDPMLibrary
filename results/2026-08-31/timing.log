@@ -1,0 +1,8 @@
+model                               s/field  (mean of 5, warmup excluded)
+corrdiff (1h, 20 draws)                 1.2
+distattn (10 draws)                    16.1
+stream (full field, 20 draws)           0.3
+repaint (1h, 10 draws, stride 5)       49.7
+vcnn                                    0.0
+gp (cpu)                                7.0
+TIMING_DONE

@@ -104,7 +104,9 @@ v1, applied untouched to v1b, give coverage 0.917 / 0.894 / 0.917 against the
 
 RePaint ties CorrDiff on accuracy for the **third time on a third independent
 set** (v1b: −0.0021, CI [−0.0079, +0.0028]; CRPS also tied) — the tie is beyond
-doubt, and it is at stride 5, ~3× CorrDiff's cost rather than the folklore ~16×.
+doubt. Measured cost (Titan Xp, paper configs): CorrDiff 1.2 s/field, RePaint
+49.7 — a **41×** gap. (Both prior folklore numbers were wrong: CorrDiff's ~15 s
+by 12×, RePaint's ~4 min was its stride-1 worst case.)
 What separates them is **calibration**: even granted its own conformal fit within
 v1b, RePaint covers 0.863 — the worst of the four — while CorrDiff covers 0.917
 using a factor fitted on different data. RePaint's spread has the wrong shape to
@@ -170,7 +172,8 @@ needs no decomposition. This applies equally to the collaborator's eddy-IoU.
 | epochs | 200 | 150 (warm-started from Sam's base) | 80 + 25 |
 | temporal priors (13/25 h) | yes | no | yes |
 | observation timestamps used | no | yes (age tokens; age-weighted loss never trained) | no |
-| inference | 20 draws, 50 DDIM steps, ~15 s/field | 10 draws, stride 10 | 20 draws, dpmpp, + magnitude net + Helmholtz recombination |
+| inference | 20 draws, 50 DDIM steps | 10 draws, stride 10 | 20 draws, dpmpp, + magnitude net + Helmholtz recombination |
+| measured s/field (Titan Xp) | **1.2** | 16.1 | 0.3 |
 | calibration | split conformal, 2.1801 (timed) | 1.621 (fitted here) | 3.141 (fitted here) |
 
 Loss equations, weights, and references: `docs/loss_doc/loss_functions.docx`.
@@ -179,7 +182,8 @@ Loss equations, weights, and references: `docs/loss_doc/loss_functions.docx`.
 
 - **"CorrDiff is the most accurate model we built."** RePaint (excluded from the
   paper) ties it: 0.0595 vs 0.0618, CI [−0.0080, +0.0028]. Say "the most accurate
-  of the three presented," or lean on calibration + speed (~15 s vs ~4 min), where
+  of the three presented," or lean on calibration + speed (measured: 1.2 vs
+  49.7 s/field), where
   CorrDiff's advantage over RePaint is real.
 - **Any eddy-recall or eddy-IoU ranking**, ours or the collaborator's, until the
   metric's divergence bias is handled (§6).
