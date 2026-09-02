@@ -1,0 +1,50 @@
+    corrdiff (1h): 10/40
+    corrdiff (1h): 20/40
+    corrdiff (1h): 30/40
+    corrdiff (1h): 40/40
+  scored corrdiff (1h)
+    distattn: 10/40
+    distattn: 20/40
+    distattn: 30/40
+    distattn: 40/40
+  scored distattn
+    stream (full field): 10/40
+    stream (full field): 20/40
+    stream (full field): 30/40
+    stream (full field): 40/40
+  scored stream (full field)
+    repaint (1h): 10/40
+    repaint (1h): 20/40
+    repaint (1h): 30/40
+    repaint (1h): 40/40
+  scored repaint (1h)
+
+REPLICATION SET (v1b, 40 fresh cases, no frame overlap with v1)
+model                      RMSE    angle    CRPS*   factor   cov@90   width
+corrdiff (1h)            0.0566   0.6614   0.0228    1.000   0.9171  0.1720
+distattn                 0.0728   0.8387   0.0286    1.621   0.8943  0.1733
+stream (full field)      0.0872   0.9212   0.0359    3.141   0.9168  0.2609
+repaint (1h)             0.0587   0.7070   0.0240    2.037   0.8633  0.1809
+* CRPS on calibrated sigma for every model
+  corrdiff (1h): coverage is SHIPPED factor, applied blind to all of v1b
+  distattn: coverage is SHIPPED factor, applied blind to all of v1b
+  stream (full field): coverage is SHIPPED factor, applied blind to all of v1b
+  repaint (1h): coverage is fit on half of v1b, verified on the other half
+
+v1 -> v1b RMSE:
+  corrdiff (1h)         0.0618 -> 0.0566   (-8.4%)
+  distattn              0.0738 -> 0.0728   (-1.4%)
+  stream (full field)   0.0908 -> 0.0872   (-4.0%)
+  repaint (1h)          0.0595 -> 0.0587   (-1.3%)
+
+paired on v1b:
+  corrdiff (1h) - distattn [rmse]: -0.01618  CI [-0.02324, -0.00954]  significant
+  corrdiff (1h) - distattn [crps]: -0.00588  CI [-0.00886, -0.00333]  significant
+  corrdiff (1h) - stream (full field) [rmse]: -0.03057  CI [-0.03821, -0.02355]  significant
+  corrdiff (1h) - stream (full field) [crps]: -0.01315  CI [-0.01600, -0.01053]  significant
+  corrdiff (1h) - repaint (1h) [rmse]: -0.00211  CI [-0.00786, +0.00277]  TIED
+  corrdiff (1h) - repaint (1h) [crps]: -0.00125  CI [-0.00374, +0.00053]  TIED
+  repaint (1h) - distattn [rmse]: -0.01407  CI [-0.02365, -0.00451]  significant
+  repaint (1h) - distattn [crps]: -0.00463  CI [-0.00875, -0.00068]  significant
+
+wrote /workspace/DDPMLibrary/benchmark/results_replication.pt

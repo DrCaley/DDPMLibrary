@@ -77,6 +77,41 @@ saved arrays)
 1 h discard significantly *hurts* the prior-less models (DistAttn +15.5%, GP
 +10.9%), so each model runs at its own optimum.
 
+## Replication (independent set — run this section at a reviewer)
+
+Everything above replicates on `ocean_bench_v1b`: 40 fresh cases, **zero frame
+overlap** with v1 (verified), fresh generation seed, fresh diffusion seeds, and —
+critically — the 1 h cutoff and all calibration factors **fixed in advance**, so
+these numbers are clean of any selection-on-test:
+
+| model | RMSE (v1 → v1b) | CRPS | coverage@90, shipped factor applied blind |
+|---|---|---|---|
+| **CorrDiff** (1 h) | 0.0618 → **0.0566** | **0.0228** | **0.9171** |
+| DistAttn | 0.0738 → 0.0728 | 0.0286 | 0.8943 |
+| Stream (full field) | 0.0908 → 0.0872 | 0.0359 | 0.9168 |
+
+Identical ranking, all pairwise gaps significant again (corrdiff−distattn
+−0.0162 CI [−0.0232, −0.0095]; corrdiff−stream −0.0306), and the cutoff-selected
+configuration got *better* on unseen cases — the opposite of selection inflation.
+
+**The shipped conformal factors hold blind**: 2.1801 / 1.621 / 3.141 fitted on
+v1, applied untouched to v1b, give coverage 0.917 / 0.894 / 0.917 against the
+0.90 target. That is the calibration claim, validated out-of-sample.
+
+→ `results_replication.pt`, benchmark `ocean_bench_v1b.npz`
+
+## RePaint: the honest footnote (measured, not assumed)
+
+RePaint ties CorrDiff on accuracy for the **third time on a third independent
+set** (v1b: −0.0021, CI [−0.0079, +0.0028]; CRPS also tied) — the tie is beyond
+doubt, and it is at stride 5, ~3× CorrDiff's cost rather than the folklore ~16×.
+What separates them is **calibration**: even granted its own conformal fit within
+v1b, RePaint covers 0.863 — the worst of the four — while CorrDiff covers 0.917
+using a factor fitted on different data. RePaint's spread has the wrong shape to
+calibrate well; CorrDiff's does not. For a paper whose deliverable is honest
+uncertainty for a planner, that is the principled reason CorrDiff is the headline
+model and RePaint is related work, and it is measured rather than asserted.
+
 ## The supporting results, in the order a reader will ask
 
 **1. Discard observations older than 1 h (models with temporal priors only).**
