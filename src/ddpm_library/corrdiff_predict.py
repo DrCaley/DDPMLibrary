@@ -49,6 +49,7 @@ import numpy as np
 import torch
 
 from . import config as C
+from .calibration import resolve_sigma_scale
 from .corrdiff import (
     UNet, VDiffusion, assemble_cond, ddim_sample_residual, dist_channel,
     geometry_channels, observation_channels, sigma_channel,
@@ -329,10 +330,12 @@ class CorrDiff:
         if n_draws > 1:
             unc_model = draws.std(axis=0) * self.data_std              # scale-only: no offset
             if calibrate:
-                scale = (C.CORRDIFF_SIGMA_SCALE if sigma_scale is None
-                         else float(sigma_scale))
-                if scale <= 0:
-                    raise ValueError(f"sigma_scale must be > 0; got {sigma_scale}")
+                scale, why = resolve_sigma_scale(
+                    obs_list, timed=C.CORRDIFF_SIGMA_SCALE_TIMED,
+                    simultaneous=C.CORRDIFF_SIGMA_SCALE, override=sigma_scale,
+                    n_draws=n_draws, fitted_n_draws=C.CORRDIFF_FITTED_N_DRAWS,
+                    model="CorrDiff")
+                self._last_sigma_scale = (scale, why)
                 unc_model = unc_model * scale
         else:
             unc_model = np.zeros_like(mean_model)

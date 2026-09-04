@@ -244,8 +244,8 @@ field itself, which leaks into every sampled field.
 | conditioning | 10 channels: 3 observation, 4 prior (lags 13, 25 h), 3 geometry | 10 channels |
 | parameterisation | x0 | n/a |
 | T / schedule / noise | 1000 / cosine / divergence-free | n/a |
-| training | 80 epochs configured, best at epoch 48; lr 5e-5, batch 6, EMA 0.999 | 25 epochs configured, best at epoch 14; lr 2e-3, batch 16, backbone frozen |
-| sampler | DPM-Solver++(2M), 6 steps, 20 draws | n/a |
+| training | 300 epochs configured, best at epoch 78; lr 2e-4, batch 6, EMA 0.999 | 25 epochs configured, best at epoch 14; lr 2e-3, batch 16, backbone frozen |
+| sampler | DPM-Solver++(2M), 2 steps, 20 draws | n/a |
 
 The direction network never predicts an angle. Direction is scored by the
 `1 - cos theta` loss term, separately from speed. Incompressibility is structural,
@@ -257,13 +257,12 @@ sampler at 100 steps is kept for reproducing published numbers.
 
 ### Losses
 
-Direction network, four terms:
+Direction network, three terms:
 
 ```
 L = w_t*||x0_hat - x0||^2_omega
   + 1.0*(1 - cos theta)_omega
   + 0.2*(rms(x0_hat)/rms(x0) - 1)^2
-  + 1.0*(1 - rho(sigma_model, sigma_empirical))
 
 w_t = min(SNR_t, 5) / mean_t[min(SNR_t, 5)]
 ```
@@ -273,9 +272,21 @@ w_t = min(SNR_t, 5) / mean_t[min(SNR_t, 5)]
 | Min-SNR weighted squared error | caps easy timesteps so they stop soaking up the gradient |
 | `1 - cos theta` | direction error, scored separately from speed |
 | rms ratio | penalises amplitude shrinkage; squared error rewards hedging toward the mean, which flattens the field |
-| `1 - rho` | makes predicted uncertainty correlate with actual error. Being a correlation it fixes the pattern, not the width |
 
-A vorticity term exists in the code and was left switched off (lambda = 0).
+**A fourth term was dropped on 2026-09-02.** `1.0*(1 - rho(sigma_model,
+sigma_empirical))` correlated the model's directional spread across draws against
+a precomputed empirical spread map, and was intended to make predicted uncertainty
+track actual error. Measured against a matched control it did the opposite --
+r(sigma, error) 0.223 with it against 0.296 without -- while also degrading
+vorticity fidelity and widening intervals ~10% at matched coverage, for a
+statistically tied RMSE. No weight in [0, 1] was net positive. The shipped
+direction weights are now `StreamFn_Cond_x0_mag.pt`, the 78-epoch no-spread
+predecessor of the previous 48-epoch spread-term checkpoint. See
+`STREAM_LOSS_ABLATIONS.md`.
+
+A vorticity term also exists in other stream loss variants in the codebase and was
+not used. Tested separately: it transfers on Stream, unlike on CorrDiff, but moves
+vorticity correlation only 0.560 to 0.570 across a 5x change in weight.
 
 Magnitude network:
 
@@ -308,8 +319,14 @@ and `n_draws=1` returned a single noisy draw as the mean, costing 3.8%. Together
 18.8%. Both were fixed on 2026-08-31; any Stream number from before that date
 understates the model.
 
-The uncertainty map also needs a light nan-aware Gaussian smooth
-(`STREAM_UNC_SMOOTH_SIGMA = 0.8`). Central differences have a Fourier symbol that
+The ensemble size itself was swept on CorrDiff and the shipped 20 confirmed: 10 is
+significantly worse on all five metrics, 40 buys nothing for twice the cost. The
+conformal factor does not transfer across ensemble sizes, so changing `n_draws` now
+warns. See `DEFAULTS_AND_DIALS.md`.
+
+The uncertainty map also needs a nan-aware Gaussian smooth
+(`STREAM_UNC_SMOOTH_SIGMA = 3.2`; it was 0.8 until it was swept on 2026-09-04, which
+also refit the conformal factor to 3.165). Central differences have a Fourier symbol that
 vanishes at Nyquist, so grid-scale checkerboard modes are unconstrained by the
 divergence-free structure and appear in the ensemble spread. Smoothing removes them
 and raises calibration correlations by about 0.025.
@@ -391,7 +408,7 @@ Frozen benchmark, 40 cases, each model at its own best configuration.
 |---|---|---|---|---|---|---|
 | CorrDiff, 1 h cutoff | 0.0618 | 0.6842 | 0.0242 | 0.908 | 1.009 | 0.174 |
 | DistAttn, full track | 0.0738 | 0.7875 | 0.0296 | 0.737 | 1.621 | 0.178 |
-| Stream, full field | 0.0908 | 0.9068 | 0.0400 | 0.502 | 3.141 | 0.255 |
+| Stream, full field | 0.0865 | 0.8663 | 0.0389 | 0.435 | 3.162 | 0.207 |
 
 All three pairwise RMSE gaps and all three CRPS gaps are significant under a paired
 bootstrap over cases.
@@ -410,7 +427,7 @@ factors fixed in advance:
 |---|---|---|---|
 | CorrDiff | 0.0618 -> 0.0566 | 0.0228 | 0.9171 |
 | DistAttn | 0.0738 -> 0.0728 | 0.0286 | 0.8943 |
-| Stream | 0.0908 -> 0.0872 | 0.0359 | 0.9168 |
+| Stream | 0.0865 -> 0.0834 | 0.0329 | 0.9101 |
 
 Same ranking, same significance, and the cutoff-selected configuration got better on
 unseen cases, which is the opposite of selection inflation.
@@ -467,3 +484,10 @@ The finding is that hard physics caps you, soft physics does nothing measurable,
 temporal priors win. Stream's two-network complexity is then evidence about the
 constraint rather than engineering to defend: the magnitude network exists only to
 restore the speed information the constraint removed.
+
+That last clause is now measured rather than asserted. Ablating only the fusion step
+costs 16% RMSE, drops vorticity correlation 0.571 to 0.503, and leaves a raw ensemble
+that needs an 11.5x conformal inflation to reach 90% coverage against 3.16x with the
+network in place -- the speeds really do collapse, and by a measurable factor. It is
+also the power check on the loss-term nulls: the same paired test returns three
+significant effects here and TIED four times there. See `LOSS_TERM_ABLATIONS.md` 5.

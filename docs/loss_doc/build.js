@@ -118,7 +118,6 @@ children.push(label("LATEX"));
 children.push(code("\\mathcal{L} = w_t\\left\\|\\hat{x}_0-x_0\\right\\|^{2}_{\\Omega}"));
 children.push(code("  + 1.0\\left(1-\\cos\\theta\\right)_{\\Omega}"));
 children.push(code("  + 0.2\\left(\\frac{\\mathrm{rms}(\\hat{x}_0)}{\\mathrm{rms}(x_0)}-1\\right)^{2}"));
-children.push(code("  + 1.0\\left(1-\\rho(\\sigma_m,\\sigma_e)\\right)"));
 children.push(code("\\qquad w_t=\\frac{\\min(\\mathrm{SNR}_t,\\,5)}{\\mathrm{mean}_t\\left[\\min(\\mathrm{SNR}_t,\\,5)\\right]}"));
 
 children.push(label("MAGNITUDE NETWORK"));
@@ -130,22 +129,27 @@ children.push(code("\\mathcal{L} = \\tfrac{1}{2}\\left(\\log\\sigma^{2}"));
 children.push(code("  + \\frac{(y-\\mu)^{2}}{\\sigma^{2}}\\right) + 0.05\\,\\mathrm{TV}(\\log\\sigma^{2})"));
 
 children.push(label("EXPLANATION"));
-children.push(txt("Direction network. Same squared-error base as CorrDiff, plus three additions. "
+children.push(txt("Direction network. Same squared-error base as CorrDiff, plus two additions. "
   + "The angle term scores which way the water points, separately from how fast it goes. The "
   + "magnitude term is an explicit patch against a known failure: squared error rewards hedging "
   + "toward the average, which shrinks the field, so this compares the prediction's overall "
-  + "amplitude to the truth's and penalises shrinkage. The spread term matches where the model "
-  + "says it is uncertain against where it actually is — being a correlation, it fixes the pattern "
-  + "of the uncertainty but not its width."));
+  + "amplitude to the truth's and penalises shrinkage. "));
+children.push(txt("A fourth term was dropped on 2 Sept 2026. It correlated the model's "
+  + "spread of directions across draws against an empirical spread map, and existed to make the "
+  + "model's stated uncertainty line up with where it is actually wrong. Measured against an "
+  + "otherwise identical control it did the opposite — the correlation between predicted "
+  + "uncertainty and real error was 0.223 with the term and 0.296 without — and it also made the "
+  + "vorticity field worse and the intervals about 10% wider, for no gain in RMSE. No weight "
+  + "between 0 and 1 helped. The shipped weights no longer use it.", { italics: true }));
 children.push(txt("Magnitude network. It outputs a speed and its own confidence for every cell. "
   + "Being wrong while confident is punished hard by the second part; claiming huge uncertainty "
   + "everywhere is punished by the first. The balance forces an honest per-cell confidence instead "
   + "of one number for the whole map. Without the log term the model would just declare infinite "
   + "uncertainty and the loss would collapse to zero. The final term keeps the confidence map "
   + "smooth rather than speckled."));
-children.push(txt("Two caveats worth stating. A vorticity term exists in this code and was left "
-  + "switched off (λ = 0). And λ = 0.05 on the smoothness term is the script default — that "
-  + "checkpoint does not record it, so it is inferred rather than read.", { italics: true }));
+children.push(txt("Two caveats worth stating. A vorticity term exists in other stream loss "
+  + "variants in the codebase and was not used here. And λ = 0.05 on the smoothness term is the "
+  + "script default — that checkpoint does not record it, so it is inferred rather than read.", { italics: true }));
 
 children.push(label("REFERENCES"));
 children.push(ref("https://arxiv.org/abs/2303.09556", "the Min-SNR-γ weight"));
@@ -153,8 +157,8 @@ children.push(ref("https://doi.org/10.1109/ICNN.1994.374138", "predicting a mean
 children.push(ref("https://arxiv.org/abs/1703.04977", "per-pixel learned uncertainty in deep networks"));
 children.push(ref("https://doi.org/10.1016/0167-2789(92)90242-F", "total-variation smoothness"));
 children.push(ref("https://arxiv.org/abs/2203.09168", "caveat: this loss under-fits exactly where error is largest"));
-children.push(txt("The magnitude-matching and spread-calibration terms are ours — no citation exists, "
-  + "they need describing from scratch.", { italics: true, color: "666666" }));
+children.push(txt("The magnitude-matching term is ours — no citation exists, it needs describing "
+  + "from scratch. The spread-calibration term was also ours and has been removed.", { italics: true, color: "666666" }));
 
 // ---------------------------------------------------------------- DistAttn
 children.push(heading("DistAttn"));

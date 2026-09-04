@@ -29,13 +29,19 @@ import numpy as np
 import torch
 from scipy.stats import norm
 
-sys.path.insert(0, "/workspace/DDPMLibrary/src")
-sys.path.insert(0, "/workspace/DDPMLibrary/benchmark")
+import os                                                          # noqa: E402
+#: "auto" resolves cuda / mps / cpu, so these run off the GPU box too.
+DEV = os.environ.get("DDPM_DEVICE", "auto")
+
+ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "benchmark"))
 import score
 from ddpm_library import CorrDiff, DistAttn, GP, VCNN
 
-BENCH = Path("/workspace/DDPMLibrary/benchmark/ocean_bench_v1.npz")
-OUT = Path("/workspace/DDPMLibrary/benchmark/results_age_calibration.pt")
+BENCH = ROOT / "benchmark/ocean_bench_v1.npz"
+OUT = ROOT / "benchmark/results_age_calibration.pt"
 SEED = 20260830
 CUTOFFS_H = (0.5, 0.75, 1.0, 1.25, 1.5)          # plus the full 2 h track
 LEVEL = 0.90
@@ -45,8 +51,8 @@ obs_all, priors_all, truth = bench["observations"], bench["priors"], bench["trut
 ocean = bench["ocean_mask"]
 n_cases = len(truth)
 
-cd, da, gp, vc = (CorrDiff(device="cuda"), DistAttn(device="cuda"), GP(),
-                  VCNN(device="cuda"))
+cd, da, gp, vc = (CorrDiff(device=DEV), DistAttn(device=DEV), GP(),
+                  VCNN(device=DEV))
 
 
 def subset(rows, cutoff_h):

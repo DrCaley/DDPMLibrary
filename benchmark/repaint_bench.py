@@ -16,19 +16,25 @@ only helped models that carry them.
 import sys, warnings, hashlib
 from pathlib import Path
 import numpy as np, torch
-sys.path.insert(0, "/workspace/DDPMLibrary/src")
-sys.path.insert(0, "/workspace/DDPMLibrary/benchmark")
+
+import os                                                          # noqa: E402
+#: "auto" resolves cuda / mps / cpu, so these run off the GPU box too.
+DEV = os.environ.get("DDPM_DEVICE", "auto")
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "benchmark"))
 import score
 from ddpm_library import RePaint, RePaintUncond, metrics
 
-BENCH = Path("/workspace/DDPMLibrary/benchmark/ocean_bench_v1.npz")
-OUT = Path("/workspace/DDPMLibrary/benchmark/results_repaint_bench.pt")
+BENCH = ROOT / "benchmark/ocean_bench_v1.npz"
+OUT = ROOT / "benchmark/results_repaint_bench.pt"
 SEED, STRIDE = 20260830, 5      # stride 5: the setting used in the staleness runs
 
 bench = np.load(BENCH)
 obs_all, priors_all, truth = bench["observations"], bench["priors"], bench["truth"]
 ocean = np.asarray(bench["ocean_mask"], bool); n = len(truth)
-rp, ru = RePaint(device="cuda"), RePaintUncond(device="cuda")
+rp, ru = RePaint(device=DEV), RePaintUncond(device=DEV)
 
 
 def fresh(rows, hours):
@@ -69,7 +75,7 @@ print(f"\nfor reference, from results_final_comparison.pt:")
 print(f"{'corrdiff (1h cutoff)':<24}{0.0618:>9.4f}{0.6842:>11.4f}{0.4308:>8.4f}{0.4397:>10.4f}")
 print(f"{'distattn':<24}{0.0738:>9.4f}{0.7875:>11.4f}{0.3579:>8.4f}{0.3826:>10.4f}")
 
-ref = torch.load("/workspace/DDPMLibrary/benchmark/results_final_comparison.pt",
+ref = torch.load(str(ROOT / "benchmark/results_final_comparison.pt"),
                  map_location="cpu", weights_only=False)
 cd1 = ref["per_case_metrics"]["corrdiff (1h cutoff)"]
 cdr = ref["eddy_rot"]["corrdiff (1h cutoff)"].numpy()

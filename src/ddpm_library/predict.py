@@ -24,11 +24,8 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-import torch
 
-from .config import (
-    DEFAULT_RESAMPLE_STEPS, OCEAN_H, OCEAN_W,
-)
+from .config import DEFAULT_RESAMPLE_STEPS
 from .inference import (
     inpaint, load_network, make_schedule, resolve_device,
 )

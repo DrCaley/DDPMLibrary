@@ -35,6 +35,7 @@ import numpy as np
 import torch
 
 from . import config as C
+from .calibration import resolve_sigma_scale
 from .inference import resolve_device
 from .rasterize import observations_to_channels
 from .stream import (
@@ -230,6 +231,8 @@ class StreamDDPM:
         project_priors: bool = True,
         full_field: bool = True,
         smooth_uncertainty: bool = True,
+        calibrate: bool = True,
+        sigma_scale: Optional[float] = None,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Predict the full velocity field from scattered observations + priors.
 
@@ -340,6 +343,16 @@ class StreamDDPM:
                                           C.STREAM_UNC_SMOOTH_SIGMA)
         else:
             unc_model = np.zeros_like(mean_model)
+        if calibrate and len(fused) > 1:
+            scale, why = resolve_sigma_scale(
+                obs_list, timed=C.STREAM_SIGMA_SCALE_TIMED, override=sigma_scale,
+                n_draws=n_draws, fitted_n_draws=C.STREAM_FITTED_N_DRAWS,
+                model="Stream")
+            unc_model = unc_model * scale
+            self._last_sigma_scale = (scale, why)
+        else:
+            self._last_sigma_scale = (1.0, "uncalibrated (calibrate=False)"
+                                      if not calibrate else "single draw")
         mean_model[:, self.land_np] = 0.0
         unc_model[:, self.land_np] = 0.0
 

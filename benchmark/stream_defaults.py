@@ -16,14 +16,20 @@ gets both penalties at once.
 import sys, warnings, hashlib
 from pathlib import Path
 import numpy as np, torch
-sys.path.insert(0, "/workspace/DDPMLibrary/src")
-sys.path.insert(0, "/workspace/DDPMLibrary/benchmark")
+
+import os                                                          # noqa: E402
+#: "auto" resolves cuda / mps / cpu, so these run off the GPU box too.
+DEV = os.environ.get("DDPM_DEVICE", "auto")
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "benchmark"))
 import score
 from ddpm_library import StreamDDPM
 
-BENCH = Path("/workspace/DDPMLibrary/benchmark/ocean_bench_v1.npz")
+BENCH = ROOT / "benchmark/ocean_bench_v1.npz"
 bench = np.load(BENCH); obs_all, priors_all = bench["observations"], bench["priors"]
-n = len(bench["truth"]); st = StreamDDPM(device="cuda"); SEED = 20260830
+n = len(bench["truth"]); st = StreamDDPM(device=DEV); SEED = 20260830
 
 CFG = {"shipped defaults (n_draws=1, divfree)": dict(n_draws=1,  full_field=False),
        "n_draws=20, divfree":                   dict(n_draws=20, full_field=False),
@@ -56,5 +62,5 @@ for m in ("rmse_vector", "angle_rms_rad"):
 torch.save({"meta": {"seed": SEED, "benchmark_md5": hashlib.md5(BENCH.read_bytes()).hexdigest()},
             "per_case_metrics": {k: {m: torch.from_numpy(np.asarray(v)) for m, v in s.items()}
                                  for k, s in S.items()}},
-           "/workspace/DDPMLibrary/benchmark/results_stream_defaults.pt")
+           str(ROOT / "benchmark/results_stream_defaults.pt"))
 print("\nwrote results_stream_defaults.pt")

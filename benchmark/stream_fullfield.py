@@ -23,20 +23,26 @@ from pathlib import Path
 import numpy as np
 import torch
 
-sys.path.insert(0, "/workspace/DDPMLibrary/src")
-sys.path.insert(0, "/workspace/DDPMLibrary/benchmark")
+import os                                                          # noqa: E402
+#: "auto" resolves cuda / mps / cpu, so these run off the GPU box too.
+DEV = os.environ.get("DDPM_DEVICE", "auto")
+
+ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "benchmark"))
 import score
 from ddpm_library import StreamDDPM, metrics
 
-BENCH = Path("/workspace/DDPMLibrary/benchmark/ocean_bench_v1.npz")
-OUT = Path("/workspace/DDPMLibrary/benchmark/results_stream_fullfield.pt")
+BENCH = ROOT / "benchmark/ocean_bench_v1.npz"
+OUT = ROOT / "benchmark/results_stream_fullfield.pt"
 SEED = 20260830
 
 bench = np.load(BENCH)
 obs_all, priors_all, truth = bench["observations"], bench["priors"], bench["truth"]
 ocean = np.asarray(bench["ocean_mask"], bool)
 n = len(truth)
-st = StreamDDPM(device="cuda")
+st = StreamDDPM(device=DEV)
 
 
 def divergence(f):

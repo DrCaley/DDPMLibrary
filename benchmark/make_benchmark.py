@@ -25,10 +25,11 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+from _paths import PICKLES_DIR  # noqa: E402
 from ddpm_library.config import LAT_MIN, LAT_MAX, LON_MIN, LON_MAX   # noqa: E402
 from _harness import load_fields, frame_pool, interp_at, lookback_ok  # noqa: E402
 
-PICKLE = "/Users/henryw/Documents/DiffusionSummer2026/Datasets/pickles/data_raw_chrono.pickle"
+PICKLE = str(PICKLES_DIR / "data_raw_chrono.pickle")
 # Replication support: --seed/--out/--exclude let a second, independent set be
 # generated with the same protocol. --exclude takes an existing benchmark whose
 # target frames are removed from the pool, so the two sets share no frames.

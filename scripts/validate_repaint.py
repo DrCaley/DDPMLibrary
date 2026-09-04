@@ -14,14 +14,19 @@ import pickle
 import sys
 import time
 import warnings
+from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, "/Users/henryw/Documents/DDPMLibrary/src")
+ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "benchmark"))   # _paths lives with the benchmarks
+from _paths import PICKLES_DIR  # noqa: E402
 from ddpm_library import RePaint                                     # noqa: E402
 from ddpm_library.config import LAT_MAX, LAT_MIN, LON_MAX, LON_MIN   # noqa: E402
 
-PICKLE = "/Users/henryw/Documents/DiffusionSummer2026/Datasets/pickles/data_raw_chrono.pickle"
+PICKLE = str(PICKLES_DIR / "data_raw_chrono.pickle")
 N_FRAMES, N_DRAWS, STRIDE, N_OBS = 5, 3, 1, 90
 LAGS = (13, 25)
 

@@ -20,36 +20,44 @@ import sys, warnings, hashlib
 from pathlib import Path
 
 import numpy as np
+
+import os                                                          # noqa: E402
+#: "auto" resolves cuda / mps / cpu, so these run off the GPU box too.
+DEV = os.environ.get("DDPM_DEVICE", "auto")
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _vorticity import curl, interior_ocean_mask
 import torch
 
-sys.path.insert(0, "/workspace/DDPMLibrary/src")
-sys.path.insert(0, "/workspace/DDPMLibrary/benchmark")
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "benchmark"))
+from _paths import SCRATCH_DIR  # noqa: E402
 import score
 from ddpm_library import CorrDiff, metrics
 
-BENCH = Path("/workspace/DDPMLibrary/benchmark/ocean_bench_v1.npz")
-OUT = Path("/workspace/DDPMLibrary/benchmark/results_vorticity.pt")
+BENCH = ROOT / "benchmark/ocean_bench_v1.npz"
+OUT = ROOT / "benchmark/results_vorticity.pt"
 SEED = 20260830
 CKPTS = {
-    "baseline": "/workspace/DDPMLibrary/src/ddpm_library/assets/corrdiff_weights.pt",
-    "lam0":     "/workspace/vort_lam0/corrdiff_v2_last.pt",
-    "lamV":     "/workspace/vort_lam1/corrdiff_v2_last.pt",
+    "baseline": str(ROOT / "src/ddpm_library/assets/corrdiff_weights.pt"),
+    "lam0":     str(SCRATCH_DIR / "vort_lam0/corrdiff_v2_last.pt"),
+    "lamV":     str(SCRATCH_DIR / "vort_lam1/corrdiff_v2_last.pt"),
 }
 
 bench = np.load(BENCH)
 obs_all, priors_all, truth = bench["observations"], bench["priors"], bench["truth"]
 ocean = np.asarray(bench["ocean_mask"], bool)
+# Score vorticity on the interior only: the centred stencil is undefined on
+# the outer ring, where this script previously used a one-sided fallback.
+VORT_MASK = interior_ocean_mask(ocean)
 n = len(truth)
 
 
-def curl(f):
-    """Relative vorticity of a (H, W, 2) field, matching the training operator."""
-    u, v = f[..., 0], f[..., 1]
-    return np.gradient(v, axis=1) - np.gradient(u, axis=0)
 
 
 def structural(pred, tru):
-    cp, ct = curl(pred)[ocean], curl(tru)[ocean]
+    cp, ct = curl(pred)[VORT_MASK], curl(tru)[VORT_MASK]
     return {"vorticity_rmse": float(np.sqrt(((cp - ct) ** 2).mean())),
             "eddy_hit_rate": float(metrics.eddy_hit_rate(pred, tru, ocean))}
 
@@ -58,7 +66,7 @@ means, extra = {}, {}
 for name, path in CKPTS.items():
     if not Path(path).exists():
         print(f"  SKIP {name}: {path} missing"); continue
-    mdl = CorrDiff(device="cuda", weights_path=path)
+    mdl = CorrDiff(device=DEV, weights_path=path)
     M, X = [], []
     for i in range(n):
         with warnings.catch_warnings():

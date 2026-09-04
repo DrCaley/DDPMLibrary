@@ -57,10 +57,14 @@ CONDITIONS = ("clean", "stale", "stale_noage")
 # --------------------------------------------------------------------------- #
 # Models
 # --------------------------------------------------------------------------- #
-def build_models(names, device, repaint_stride=1, corrdiff_weights=None,
+def build_models(names, device, repaint_stride=None, corrdiff_weights=None,
                  calibrate=True):
     """name -> (model, needs_priors, predict_kwargs)."""
     import ddpm_library as L
+    from ddpm_library import config as C
+    # None -> the shipped stride, so this cannot drift from config again
+    if repaint_stride is None:
+        repaint_stride = C.REPAINT_STRIDE
     cd_kw = {"n_draws": 20, "calibrate": calibrate}
     rp_kw = {"n_draws": 10, "stride": repaint_stride}
     factories = {

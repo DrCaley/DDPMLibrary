@@ -74,15 +74,18 @@ lone isolated cell leaves a null direction. It runs once that cell is excluded.
 
 ## What it changes
 
-Final comparison, 40 cases on `ocean_bench_v1`, each model at its own optimum:
+Final comparison, 40 cases on `ocean_bench_v1`, each model at its own optimum.
+**The `stream` rows are the pre-2026-09-02 direction weights** (spread term on); the
+eddy columns have not been re-measured since the swap. Current Stream RMSE/angle are
+0.0865 / 0.8663 — see `PAPER_NUMBERS.md`.
 
 | model | RMSE | angle_rms | eddy (raw) | eddy_rot |
 |---|---|---|---|---|
 | **corrdiff (1 h cutoff)** | **0.0618** | **0.6842** | 0.4308 | 0.4397 |
 | corrdiff (full track) | 0.0673 | 0.7237 | 0.4426 | 0.4454 |
 | distattn | 0.0738 | 0.7875 | 0.3579 | 0.3826 |
-| stream (+divergent) | 0.0908 | 0.9068 | 0.3752 | **0.4559** |
-| stream (divfree only) | 0.1038 | 1.0195 | 0.4071 | **0.4594** |
+| stream (+divergent)† | 0.0908 | 0.9068 | 0.3752 | **0.4559** |
+| stream (divfree only)† | 0.1038 | 1.0195 | 0.4071 | **0.4594** |
 | vcnn | 0.0791 | 0.8220 | 0.3761 | 0.4196 |
 | gp | 0.1254 | 1.0908 | 0.1430 | 0.1451 |
 
@@ -122,9 +125,11 @@ fourth under the Poisson projection, and nothing here decides between them.
 divergence-free. On a field whose divergent component carries 14% of the energy
 that costs **12.5% RMSE and 11% angle**, both significant:
 
+† pre-2026-09-02 direction weights (spread term on).
+
 ```
-stream, divfree only   RMSE 0.1038   angle 1.0195
-stream, +divergent     RMSE 0.0908   angle 0.9068
+stream, divfree only   RMSE 0.1038   angle 1.0195      (pre-2026-09-02 weights)
+stream, +divergent     RMSE 0.0908   angle 0.9068      (pre-2026-09-02 weights)
                        -0.01294 CI [-0.01775, -0.00860]  significant
                        -0.11273 CI [-0.16120, -0.06284]  significant
 ```

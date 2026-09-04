@@ -1,8 +1,6 @@
 import math
 import torch
-import torch.nn.functional as F
 
-from .loss_functions import curl_div_loss   # vendored alongside (training-time only)
 
 # ---------------------------------------------------------------------------
 # Loss configuration
@@ -97,45 +95,6 @@ class DDPM:
     # Training loss
     # ------------------------------------------------------------------
 
-    def training_loss(
-        self,
-        model:     torch.nn.Module,
-        x0:        torch.Tensor,
-        land_mask: torch.Tensor,
-        cond:      torch.Tensor | None = None,
-    ) -> torch.Tensor:
-        """
-        Combined loss: epsilon-MSE + curl/div structural term (ocean pixels only).
-
-        total = F.mse_loss(pred_noise, noise)
-              + curl_div_weight * curl_div_loss(x0_hat, x0)
-
-        cond: optional (B, cond_ch, H, W) conditioning tensor (e.g. temporal
-              priors -- see chrono_dataset.py) passed through to the model.
-              None reproduces the original unconditional behavior exactly.
-        """
-        B = x0.shape[0]
-        t = torch.randint(0, self.T, (B,), device=self.device)
-        xt, noise = self.q_sample(x0, t)
-        pred_noise = model(xt, t, cond) if cond is not None else model(xt, t)
-
-        # Ocean mask broadcast to (1, 1, H, W)
-        ocean = (~land_mask).float()[None, None]
-
-        # Base epsilon-MSE
-        eps_loss = F.mse_loss(pred_noise * ocean, noise * ocean)
-
-        if self.curl_div_weight == 0.0:
-            return eps_loss
-
-        # Recover x0_hat from pred_noise for structural loss
-        ab = self.alpha_bar[t][:, None, None, None]
-        x0_hat = (xt - (1.0 - ab).sqrt() * pred_noise) / ab.sqrt()
-        x0_hat = x0_hat.clamp(-1.5, 1.5)
-
-        cd_loss = curl_div_loss(x0_hat, x0, ocean)
-        return eps_loss + self.curl_div_weight * cd_loss
-
     # ------------------------------------------------------------------
     # Single reverse step  p(x_{t-1} | x_t)
     # ------------------------------------------------------------------
@@ -181,12 +140,3 @@ class DDPM:
     # One forward step  q(x_t | x_{t-1})  — used by RePaint resampling
     # ------------------------------------------------------------------
 
-    def q_sample_from_prev(self, x_prev: torch.Tensor, t_int: int, t_prev_int: int = -1) -> torch.Tensor:
-        """Re-noise x_{t_prev} back to x_t for RePaint resampling.
-        Uses effective alpha for the stride jump t_prev_int -> t_int."""
-        if t_prev_int < 0:
-            t_prev_int = max(t_int - 1, 0)
-        ab      = self.alpha_bar[t_int]
-        ab_prev = self.alpha_bar[t_prev_int] if t_prev_int > 0 else torch.tensor(1.0, device=self.device)
-        alpha_eff = ab / ab_prev
-        return alpha_eff.sqrt() * x_prev + (1.0 - alpha_eff).sqrt() * torch.randn_like(x_prev) * self.noise_std

@@ -59,6 +59,23 @@ See `scripts/example.py` for a complete runnable example showing both.
 
 ---
 
+## Documentation
+
+| doc | what it covers |
+|---|---|
+| [`docs/PAPER_NUMBERS.md`](docs/PAPER_NUMBERS.md) | Final numbers per model, the supporting results in the order a reader asks for them, and the claims to avoid |
+| [`docs/METHODS.md`](docs/METHODS.md) | How each model works, the conventions, and the methods-section facts |
+| [`docs/DEFAULTS_AND_DIALS.md`](docs/DEFAULTS_AND_DIALS.md) | Every runtime dial measured: ensemble sizes, the sensor-noise channel, per-model cost, RePaint's stride |
+| [`docs/LOSS_TERM_ABLATIONS.md`](docs/LOSS_TERM_ABLATIONS.md) | All four auxiliary loss terms ablated against matched controls, plus the magnitude-network power check |
+| [`docs/STREAM_LOSS_ABLATIONS.md`](docs/STREAM_LOSS_ABLATIONS.md) | Stream in depth: the spread term, the smoothing sweep, the from-scratch run |
+| [`docs/AUDIT_2026-09-02.md`](docs/AUDIT_2026-09-02.md) | The audit that found the uncalibrated defaults, and cross-device reproducibility |
+| [`docs/OBSERVATION_AGE_AND_STRUCTURE.md`](docs/OBSERVATION_AGE_AND_STRUCTURE.md) | Observation age, staleness, and spatial structure |
+| [`docs/STALENESS_FINDINGS.md`](docs/STALENESS_FINDINGS.md) | Time-varying collection and the age cutoff |
+| [`docs/EDDY_METRIC_BIAS.md`](docs/EDDY_METRIC_BIAS.md) | Why no eddy ranking is reported (Okubo-Weiss is divergence-biased) |
+| [`docs/DATA_AND_STREAM.md`](docs/DATA_AND_STREAM.md) | The datasets, how they are built, and the stream-function pipeline |
+
+Start with `PAPER_NUMBERS.md`; it links out to the rest.
+
 ## Installation
 
 Requirements: Python ≥ 3.9, PyTorch ≥ 2.0, NumPy, and **Git LFS** (the
@@ -353,6 +370,46 @@ index). Two observations at the same grid cell get averaged.
 
 ## Changelog
 
+- **0.9.0** — Calibration guards, a corrected default, and a cleanup pass.
+  - **The conformal factor does not transfer across sampling settings.** It runs
+    5.053 / 4.116 / 3.805 / 3.688 at `n_draws` = 5 / 10 / 20 / 40 on CorrDiff, so a
+    factor fitted at 20 and used at 5 under-covers by about a third. All four
+    predictors now raise a `RuntimeWarning` when `n_draws` — or, for RePaint, the
+    chain `stride` — differs from what the factor was fitted at. Pass `sigma_scale=`
+    to take responsibility for the factor yourself.
+  - **`REPAINT_STRIDE` changed 1 → 5.** Every RePaint number we report (the factor,
+    the v1b calibration, the cost) was produced at stride 5, but `predict()` defaulted
+    to stride 1 and silently applied a factor that does not hold there. Stride 1 has
+    never been scored head-to-head against 5 — it is ~5x the cost, about 7 h for the
+    benchmark — so 5 is the calibrated setting, not a proven optimum.
+  - **`X_DEFAULT_N_DRAWS` and `X_FITTED_N_DRAWS` are now separate** for all four models.
+    The guard above initially compared against the *default*, which conflates the
+    speed/quality choice we ship with the ensemble size the factor was fitted at —
+    so raising a default would have silenced the very warning that should fire. The
+    guard reads `FITTED`; changing a default without refitting now warns.
+  - **Ensemble sizes confirmed** for CorrDiff and Stream: below the default costs real
+    accuracy on every metric, above it buys nothing. `benchmark/n_draws_sweep.py`.
+  - **DistAttn's ensemble size is measurably wrong at 10** — 20 is significantly better
+    on four of six metrics with intervals 14% narrower — but the default is unchanged.
+    Raising it doubles that model's cost, requires refitting `DISTATTN_SIGMA_SCALE_TIMED`
+    (fitted at 10) plus a fresh blind check on `ocean_bench_v1b`, and invalidates
+    collaborator results produced at 10. Measured and documented, not applied:
+    `docs/DEFAULTS_AND_DIALS.md` §3b.
+  - **Per-model inference cost measured** for all six models. Stream is the cheapest
+    of the three paper models at 0.2 s/field, 13x cheaper than CorrDiff; DistAttn is
+    15x CorrDiff. Twelve harnesses had `device="cuda"` hardcoded and so only ran on the
+    GPU box; they now resolve the device (`DDPM_DEVICE`, default `auto`).
+  - **Cleanup.** Six benchmark scripts had grown their own copy of the metric suite;
+    they now share `benchmark/_score.py`, verified bit-identical on all nine
+    quantities. 70 hardcoded absolute paths (`/workspace/...`, `/Users/henryw/...`)
+    replaced by `benchmark/_paths.py`, so the scripts run on any machine. Removed two
+    unused path generators (`stream/paths.py` 207 → 89 lines) and the dead
+    `STREAM_UNCERTAINTY_N_DRAWS`. See `docs/DEFAULTS_AND_DIALS.md`.
+- **0.8.0** — Audit release. `CorrDiff`/`StreamDDPM`/`DistAttn` now return calibrated
+  uncertainty by default (they previously delivered 0.834/0.489/0.737 coverage at a 90 %
+  target). Stream ships its no-spread predecessor weights, sampler default 6 → 2 steps,
+  `STREAM_SIGMA_SCALE_TIMED` refitted to 3.304. Training-only code removed from
+  `repaint/`. See `docs/AUDIT_2026-09-02.md`.
 - **0.7.0** — Added `DistAttn`, the distance/time-aware attention model
   (observations as cross-attention tokens; the only predictor that uses the
   observation timestamp). `scripts/compare_models.py` gained `--frames-file`
@@ -380,8 +437,7 @@ index). Two observations at the same grid cell get averaged.
 
 ## CorrDiff — calibrated uncertainty (v0.5.0)
 
-`CorrDiff` is the research group's best model and the **only predictor here whose
-`uncertainty` output is calibrated** rather than zeros. A deterministic V-CNN supplies
+`CorrDiff` is the research group's best model. A deterministic V-CNN supplies
 the mean field; a conditional diffusion model generates the *residual* (truth − mean),
 after Mardani et al. (2025). Sampling many residuals gives an ensemble whose mean is the
 reconstruction and whose spread is a usable uncertainty estimate.
@@ -406,13 +462,38 @@ values widen the predictive distribution and trust the observations less.
 
 **Calibration.** The raw diffusion ensemble is under-dispersed (a known property of
 conditional diffusion models). `predict()` applies a pre-fitted scale factor by default
-so that `mean ± 1.645 × uncertainty` covers ~90 % of outcomes; it was fitted by split
-conformal on held-out frames and verified out-of-sample at 0.8999 coverage against a
-0.900 target. Pass `calibrate=False` for the raw ensemble spread.
+so that `mean ± 1.645 × uncertainty` covers ~90 % of outcomes. Since v0.8.0 the factor
+is chosen from the observation timestamps, because the right value depends on whether
+the field was sampled simultaneously or over a period — see *Uncertainty contract*
+below. Pass `calibrate=False` for the raw ensemble spread.
 
 **Cost.** `n_draws` defaults to a full ensemble because uncertainty is the point of this
 model. Pass `n_draws=1` for a single field (uncertainty is then zeros, like the other
 predictors).
+
+## Uncertainty contract (v0.8.0)
+
+`CorrDiff`, `StreamDDPM` and `DistAttn` return a **conformally calibrated** 1-sigma by
+default. Before v0.8.0 `StreamDDPM` and `DistAttn` returned the raw ensemble spread and
+`CorrDiff` applied a factor fitted for simultaneous observations, so on a realistic
+time-spread transect the three delivered 0.489, 0.737 and 0.834 coverage against a 90 %
+target. They now deliver ~0.90.
+
+The factor depends on how the observations were collected — a field sampled over two
+hours has moved under the vehicle, so the model's own spread understates the error by
+more than it does for a snapshot. The observation tuples already carry timestamps, so
+the factor is chosen from the data:
+
+```python
+mean, unc = model.predict(obs, priors)        # calibrated (default)
+mean, unc = model.predict(obs, priors, calibrate=False)      # raw ensemble spread
+mean, unc = model.predict(obs, priors, sigma_scale=2.5)      # explicit override
+model._last_sigma_scale        # -> (2.1801, 'time-spread (span 2.00 h)')
+```
+
+Use `calibrate=False` when fitting your own conformal factor, or the fit will be applied
+on top of the built-in one. `RePaint` calibrates as well (factor 2.4513). `RePaintUncond` has no fitted factor
+and returns raw spread; `VCNN` returns zeros; `GP` returns its own posterior sigma.
 
 ## RePaint — Joseph's time-conditioned model (v0.6.0)
 

@@ -18,21 +18,27 @@ from pathlib import Path
 import numpy as np, torch
 from scipy.stats import norm
 
-sys.path.insert(0, "/workspace/DDPMLibrary/src")
-sys.path.insert(0, "/workspace/DDPMLibrary/benchmark")
+import os                                                          # noqa: E402
+#: "auto" resolves cuda / mps / cpu, so these run off the GPU box too.
+DEV = os.environ.get("DDPM_DEVICE", "auto")
+
+ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "benchmark"))
 import score
 from ddpm_library import CorrDiff, DistAttn, StreamDDPM, metrics
 from ddpm_library import config as C
 
-BENCH = Path("/workspace/DDPMLibrary/benchmark/ocean_bench_v1.npz")
-OUT = Path("/workspace/DDPMLibrary/benchmark/results_uncertainty_final.pt")
+BENCH = ROOT / "benchmark/ocean_bench_v1.npz"
+OUT = ROOT / "benchmark/results_uncertainty_final.pt"
 SEED, LEVEL = 20260830, 0.90
 z = float(norm.ppf(0.5 + LEVEL / 2.0))
 
 bench = np.load(BENCH)
 obs_all, priors_all, truth = bench["observations"], bench["priors"], bench["truth"]
 ocean = np.asarray(bench["ocean_mask"], bool); n = len(truth)
-cd, da, st = CorrDiff(device="cuda"), DistAttn(device="cuda"), StreamDDPM(device="cuda")
+cd, da, st = CorrDiff(device=DEV), DistAttn(device=DEV), StreamDDPM(device=DEV)
 
 
 def fresh(rows, hours):
@@ -45,17 +51,17 @@ def fresh(rows, hours):
 MODELS = {
     "corrdiff (1h, timed factor)": lambda r, p, i: cd.predict(
         [tuple(x) for x in fresh(r, 1.0)], p, n_draws=20, seed=SEED + i,
-        sigma_scale=C.CORRDIFF_SIGMA_SCALE_TIMED),
+        sigma_scale=C.CORRDIFF_SIGMA_SCALE_TIMED, calibrate=False),
     "distattn (raw spread)": lambda r, p, i: da.predict(
-        [tuple(x) for x in r], n_draws=10, seed=SEED + i),
+        [tuple(x) for x in r], n_draws=C.DISTATTN_DEFAULT_N_DRAWS, seed=SEED + i, calibrate=False),
     "stream (raw spread)": lambda r, p, i: st.predict(
-        [tuple(x) for x in r], p, n_draws=20, seed=SEED + i, full_field=True),
+        [tuple(x) for x in r], p, n_draws=20, seed=SEED + i, full_field=True, calibrate=False),
     # Untested prediction of the age-cutoff rule: Stream carries the 13/25 h
     # priors, and every prior-carrying model measured so far gains from the 1 h
     # discard (corrdiff -8.2%, repaint -14%) while every prior-less model loses.
     "stream (1h cutoff)": lambda r, p, i: st.predict(
         [tuple(x) for x in fresh(r, 1.0)], p, n_draws=20, seed=SEED + i,
-        full_field=True),
+        full_field=True, calibrate=False),
 }
 
 means, sigmas = {}, {}

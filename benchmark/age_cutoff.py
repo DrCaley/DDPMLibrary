@@ -24,16 +24,23 @@ Runs on ocean_bench_v1, so the observations, truth, mask and metrics are the
 frozen shared ones.
 """
 import sys, warnings, json
-sys.path.insert(0, "/workspace/DDPMLibrary/src")
-sys.path.insert(0, "/workspace/DDPMLibrary/benchmark")
+from pathlib import Path
+
+import os                                                          # noqa: E402
+#: "auto" resolves cuda / mps / cpu, so these run off the GPU box too.
+DEV = os.environ.get("DDPM_DEVICE", "auto")
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "benchmark"))
 import numpy as np
 import score
 from ddpm_library import CorrDiff, DistAttn, StreamDDPM, GP   # noqa: F401
 
-bench = np.load("/workspace/DDPMLibrary/benchmark/ocean_bench_v1.npz")
+bench = np.load(str(ROOT / "benchmark/ocean_bench_v1.npz"))
 obs_all, priors_all = bench["observations"], bench["priors"]
 ocean = bench["ocean_mask"]
-cd, da, gp = CorrDiff(device="cuda"), DistAttn(device="cuda"), GP()
+cd, da, gp = CorrDiff(device=DEV), DistAttn(device=DEV), GP()
 MODELS = {"corrdiff+priors": (cd, True,  {"n_draws": 20}),
           "corrdiff-priors": (cd, False, {"n_draws": 20}),
           "distattn":        (da, False, {"n_draws": 10}),
@@ -128,5 +135,5 @@ for n in MODELS:
     print(line)
 
 json.dump({k: {m: list(map(float, v)) for m, v in d.items()} for k, d in pf.items()},
-          open("/workspace/DDPMLibrary/benchmark/age_cutoff.json", "w"), indent=2)
+          open(str(ROOT / "benchmark/age_cutoff.json"), "w"), indent=2)
 print("\nwrote age_cutoff.json")

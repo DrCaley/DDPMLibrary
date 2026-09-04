@@ -9,7 +9,8 @@ SAMPLING time by guidance (DPS / MCG) rather than by conditioning.
 Operates in physical m/s -- this pipeline is not z-scored.
 
 Vendored from the collaborator's training repo; the only edit is the import path
-in ``diffusion.py`` (``from loss_functions`` -> ``from .loss_functions``). The
+in ``diffusion.py``. Training-only code (``training_loss`` and the structural
+loss module) is omitted, as in ``distattn/``. The
 user-facing wrappers are in ``ddpm_library.repaint_predict``.
 """
 

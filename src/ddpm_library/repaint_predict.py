@@ -59,6 +59,7 @@ import numpy as np
 import torch
 
 from . import config as C
+from .calibration import resolve_sigma_scale
 from .inference import resolve_device
 from .rasterize import observations_to_channels
 from .repaint import DDPM, SAMPLERS, Repaint
@@ -169,6 +170,8 @@ class _RePaintBase:
         step_size: float,
         stride: int,
         seed,
+        calibrate: bool = False,
+        sigma_scale: Optional[float] = None,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Rasterize the observations, run the guided chain, reduce to mean/spread."""
         obs_list = list(observations)
@@ -208,6 +211,17 @@ class _RePaintBase:
 
         mean_model = arr.mean(axis=0)
         unc_model = arr.std(axis=0) if n_draws > 1 else np.zeros_like(mean_model)
+        if calibrate and n_draws > 1:
+            scale, why = resolve_sigma_scale(
+                obs_list, timed=C.REPAINT_SIGMA_SCALE_TIMED, override=sigma_scale,
+                n_draws=n_draws, fitted_n_draws=C.REPAINT_FITTED_N_DRAWS,
+                stride=stride, fitted_stride=C.REPAINT_CALIBRATED_STRIDE,
+                model="RePaint")
+            unc_model = unc_model * scale
+            self._last_sigma_scale = (scale, why)
+        else:
+            self._last_sigma_scale = (1.0, "uncalibrated (calibrate=False)"
+                                      if not calibrate else "single draw")
         mean_model[:, self.land_np] = 0.0
         unc_model[:, self.land_np] = 0.0
         return (_model2lib_field(mean_model.astype(np.float32)),
@@ -278,6 +292,8 @@ class RePaint(_RePaintBase):
         step_size: float = C.REPAINT_STEP_SIZE,
         stride: int = C.REPAINT_STRIDE,
         seed=None,
+        calibrate: bool = True,
+        sigma_scale: Optional[float] = None,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Reconstruct the field from scattered observations and temporal priors.
 
@@ -306,6 +322,7 @@ class RePaint(_RePaintBase):
         cond_np = self._build_priors(priors)
         cond_t = torch.from_numpy(cond_np).unsqueeze(0).to(self.device)
         return self._sample(observations, cond_t, n_draws=n_draws, sampler=sampler,
+                            calibrate=calibrate, sigma_scale=sigma_scale,
                             step_size=step_size, stride=stride, seed=seed)
 
 
@@ -342,6 +359,10 @@ class RePaintUncond(_RePaintBase):
         seed=None,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Reconstruct the field from scattered observations alone.
+
+        No ``calibrate`` option: ``REPAINT_SIGMA_SCALE_TIMED`` was fitted for the
+        prior-conditioned :class:`RePaint`, and there is no fitted factor for this
+        variant. ``uncertainty`` is the RAW ensemble spread.
 
         Takes no ``priors``: this model was trained without them. See
         :meth:`RePaint.predict` for the shared parameters and return contract.

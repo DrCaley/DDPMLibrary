@@ -20,22 +20,28 @@ from pathlib import Path
 import numpy as np, torch
 from scipy.stats import norm
 
-sys.path.insert(0, "/workspace/DDPMLibrary/src")
-sys.path.insert(0, "/workspace/DDPMLibrary/benchmark")
+import os                                                          # noqa: E402
+#: "auto" resolves cuda / mps / cpu, so these run off the GPU box too.
+DEV = os.environ.get("DDPM_DEVICE", "auto")
+
+ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "benchmark"))
 import score
 from ddpm_library import CorrDiff, DistAttn, StreamDDPM, RePaint, metrics
 from ddpm_library import config as C
 
-BENCH = Path("/workspace/DDPMLibrary/benchmark/ocean_bench_v1b.npz")
-OUT = Path("/workspace/DDPMLibrary/benchmark/results_replication.pt")
+BENCH = ROOT / "benchmark/ocean_bench_v1b.npz"
+OUT = ROOT / "benchmark/results_replication.pt"
 SEED, LEVEL = 20260901, 0.90          # fresh diffusion seeds too
 z = float(norm.ppf(0.5 + LEVEL / 2.0))
 
 bench = np.load(BENCH)
 obs_all, priors_all, truth = bench["observations"], bench["priors"], bench["truth"]
 ocean = np.asarray(bench["ocean_mask"], bool); n = len(truth)
-cd, da = CorrDiff(device="cuda"), DistAttn(device="cuda")
-st, rp = StreamDDPM(device="cuda"), RePaint(device="cuda")
+cd, da = CorrDiff(device=DEV), DistAttn(device=DEV)
+st, rp = StreamDDPM(device=DEV), RePaint(device=DEV)
 
 
 def fresh(rows, hours):
@@ -48,12 +54,12 @@ def fresh(rows, hours):
 MODELS = {
     "corrdiff (1h)": (lambda r, p, i: cd.predict(
         [tuple(x) for x in fresh(r, 1.0)], p, n_draws=20, seed=SEED + i,
-        sigma_scale=C.CORRDIFF_SIGMA_SCALE_TIMED), 1.0),
+        sigma_scale=C.CORRDIFF_SIGMA_SCALE_TIMED, calibrate=False), 1.0),
     "distattn": (lambda r, p, i: da.predict(
-        [tuple(x) for x in r], n_draws=10, seed=SEED + i),
+        [tuple(x) for x in r], n_draws=C.DISTATTN_DEFAULT_N_DRAWS, seed=SEED + i, calibrate=False),
         float(C.DISTATTN_SIGMA_SCALE_TIMED)),
     "stream (full field)": (lambda r, p, i: st.predict(
-        [tuple(x) for x in r], p, n_draws=20, seed=SEED + i, full_field=True),
+        [tuple(x) for x in r], p, n_draws=20, seed=SEED + i, full_field=True, calibrate=False),
         float(C.STREAM_SIGMA_SCALE_TIMED)),
     "repaint (1h)": (lambda r, p, i: rp.predict(
         [tuple(x) for x in fresh(r, 1.0)], p, n_draws=10, stride=5, seed=SEED + i),

@@ -73,7 +73,17 @@ STREAM_DATASET_PATH = (
 #   library grid is (lat=44, lon=94); the stream model works in (94, 44).
 STREAM_H, STREAM_W = 94, 44
 
-# Checkpoint architecture / diffusion config (from StreamFn_Cond_x0_mag_spread.pt).
+# Checkpoint architecture / diffusion config (from StreamFn_Cond_x0_mag.pt).
+# 2026-09-02: the shipped direction weights were changed from
+# StreamFn_Cond_x0_mag_spread.pt (48 ep, spread term on) to its own no-spread
+# predecessor StreamFn_Cond_x0_mag.pt (78 ep). The spread term -- the 4th
+# direction-loss term, 1 - rho(sigma_model, sigma_empirical) -- was measured to
+# degrade vorticity fidelity, interval sharpness, and the uncertainty-error
+# correlation it was itself designed to raise, at a statistically tied RMSE.
+# Verified across a short fine-tune, a 20k-step fine-tune on other hardware, and
+# the two historical checkpoints, on both benchmarks. See
+# docs/STREAM_LOSS_ABLATIONS.md. Architecture is unchanged: cond_ch 10,
+# base_ch 64, time_dim 256, T 1000, cosine, div-free noise.
 STREAM_COND_CH = 10          # legacy: 3 obs + 4 priors (lags 13,25) + 3 geom
 STREAM_LAGS = (13, 25)       # temporal-prior lags, in hours/frames
 STREAM_PRED_TYPE = "x0_streamfn_cond"
@@ -88,20 +98,35 @@ STREAM_NOISE_TYPE = "div_free"
 # (validated head-to-head). "ddpm" = the classic ancestral sampler (bit-exact
 # to the research pipeline) — kept available for reproducing published numbers.
 STREAM_SAMPLER = "dpmpp"
-STREAM_DPMPP_STEPS = 6            # sweet spot: peak calibration, diverse draws
+# 2026-09-02: was 6, a value validated against the PREVIOUS direction weights.
+# Re-swept on the current weights over {1,2,3,4,5,6,10,16}: 2 is the optimum and
+# beats 6 on RMSE (0.0865 vs 0.0919), vorticity RMSE (0.01654 vs 0.01743),
+# vorticity correlation (0.571 vs 0.562), calibrated CRPS (0.0347 vs 0.0368) and
+# interval width (0.216 vs 0.230) — replicated on ocean_bench_v1b — while costing
+# a third of the compute. 1 step lowers RMSE and CRPS further but DEGRADES
+# vorticity (corr 0.528), i.e. it buys the metric by blurring; 2 is the structure
+# optimum. See docs/STREAM_LOSS_ABLATIONS.md.
+STREAM_DPMPP_STEPS = 2
 STREAM_DDPM_STEPS = 100          # the proven ancestral config
 STREAM_DEFAULT_N_DRAWS = 20  # matches CorrDiff; every other diffusion predictor
                              # here defaults to 10-20. This was 1, which returned a
                              # single noisy draw as the "mean" and zeros for the
                              # uncertainty -- measured at +3.8% RMSE versus 20 draws.
                              # Set 1 explicitly for the fast single-field path.
-STREAM_UNCERTAINTY_N_DRAWS = 40
+#: Ensemble size STREAM_SIGMA_SCALE_TIMED was fitted at (see CORRDIFF_FITTED_N_DRAWS).
+STREAM_FITTED_N_DRAWS = 20
 
-#: Split-conformal factor for Stream's raw ensemble spread (full_field=True,
-#: n_draws=20) on 2 h time-varying collection (fitted on 20 benchmark cases,
-#: held-out coverage 0.903 at the 0.90 level). Multiply the returned uncertainty
-#: by this for calibrated intervals.
-STREAM_SIGMA_SCALE_TIMED = 3.141   # used by the uncertainty-map scripts
+#: Split-conformal factor for Stream's raw ensemble spread, at the CURRENT
+#: defaults (full_field=True, n_draws=20, dpmpp with STREAM_DPMPP_STEPS steps) on
+#: 2 h time-varying collection. Fitted on 20 cases of ocean_bench_v1, held-out
+#: coverage 0.895 at the 0.90 level; applied blind to all of ocean_bench_v1b it
+#: gives 0.910 at width 0.221. Multiply the returned uncertainty by this for
+#: calibrated intervals.
+#: MEASURED -- do not edit by hand without re-fitting. It is coupled to BOTH the
+#: sampler step count and STREAM_UNC_SMOOTH_SIGMA: 2.909 at 6 steps with sigma 0.8,
+#: 3.304 at 2 steps with sigma 0.8, and 3.165 at 2 steps with sigma 3.2 (current).
+#: Re-fit if either STREAM_DPMPP_STEPS or STREAM_UNC_SMOOTH_SIGMA changes.
+STREAM_SIGMA_SCALE_TIMED = 3.165   # used by the uncertainty-map scripts
 
 # The stream-function + div-free-noise scheme uses central differences, whose
 # Fourier symbol vanishes at the Nyquist frequency, so grid-scale (checkerboard)
@@ -109,7 +134,13 @@ STREAM_SIGMA_SCALE_TIMED = 3.141   # used by the uncertainty-map scripts
 # artifact in the ENSEMBLE SPREAD (not the mean field). A light nan-aware
 # Gaussian smooth of the uncertainty removes it and improves calibration
 # (r_angle/mag/overall all rise ~0.025 on a 40-frame test).
-STREAM_UNC_SMOOTH_SIGMA = 0.8
+# 2026-09-02: was 0.8, a value never validated against a sweep. Re-swept at the
+# current defaults over {0, 0.8, 1.6, 3.2, 6.4, 12.8} with the conformal factor
+# re-fitted per value: 3.2 gives significantly narrower intervals (0.2075 vs
+# 0.2160, CI [-0.0090, -0.0080]) and better calibrated CRPS (0.0344 vs 0.0347,
+# CI [-0.00034, -0.00021]) at matched coverage, with r(sigma, error) tied.
+# r peaks here and falls beyond, so this is an interior optimum, not an edge.
+STREAM_UNC_SMOOTH_SIGMA = 3.2
 
 
 # ===========================================================================
@@ -138,6 +169,11 @@ CORRDIFF_T = 1000            # training diffusion steps (cosine, v-prediction)
 # ~2% but the distribution degrades, so do not reduce this when uncertainty matters.
 CORRDIFF_STEPS = 50
 CORRDIFF_DEFAULT_N_DRAWS = 20   # uncertainty is the point of this model; 1 = fast
+#: Ensemble size the conformal factors below were fitted at. Kept separate from the
+#: default on purpose: the default is a speed/quality choice, this is a fact about
+#: the factor, and the predictors warn when a call does not match it. Changing the
+#: default without refitting must therefore leave this alone.
+CORRDIFF_FITTED_N_DRAWS = 20
                                 # single field with zero uncertainty.
 
 # Sensor-noise dial: the model was trained on sigma ~ U(0, CORRDIFF_NOISE_MAX),
@@ -197,8 +233,33 @@ REPAINT_NOISE_STD = 0.11614292860031128   # from the checkpoint; scales the init
 # the full 1000-step chain; stride > 1 subsamples the chain for speed.
 REPAINT_SAMPLER = "dps"       # DPS marginally beat MCG in the published numbers
 REPAINT_STEP_SIZE = 0.04
-REPAINT_STRIDE = 1
+#: Chain subsampling. Every RePaint number we report -- the conformal factor below,
+#: the v1b calibration, the 49.7 s/field cost -- was produced at stride 5, so that is
+#: the default: a default no measurement supports is worse than one that matches the
+#: evidence. Changed from 1 on 2026-09-04, when the mismatch was found (the factor is
+#: fitted at stride 5 and `predict()` was defaulting to stride 1, silently applying a
+#: factor that does not hold).
+#: OPEN: stride 1 has never been scored against stride 5 head to head -- stride 1 is
+#: ~5x the cost, about 7 h for the 40-case benchmark, so it was not affordable. More
+#: steps would normally mean better samples, so treat 5 as the calibrated setting
+#: rather than as a proven optimum.
+REPAINT_STRIDE = 5
+#: The stride the shipped factor was fitted at; predictors warn when they differ.
+REPAINT_CALIBRATED_STRIDE = 5
 REPAINT_DEFAULT_N_DRAWS = 10  # the published evaluation used n = 10 per seed
+#: Ensemble size REPAINT_SIGMA_SCALE_TIMED was fitted at.
+REPAINT_FITTED_N_DRAWS = 10
+
+#: Split-conformal factor for RePaint's raw ensemble spread (n_draws=10, stride 5,
+#: 1 h observation cutoff) on 2 h time-varying collection. Fitted on the first 20
+#: cases of ocean_bench_v1, held-out coverage 0.920 at the 0.90 level; applied blind
+#: to all of ocean_bench_v1b it gives 0.911 at width 0.195.
+#: MEASURED 2026-09-03 -- do not edit by hand without re-fitting.
+#: Added because RePaint was the only diffusion predictor still returning raw
+#: spread. It also corrects the record: RePaint calibrates as well as the others
+#: (0.911 blind, against corrdiff 0.917 / stream 0.910 / distattn 0.894), so the
+#: reason to prefer CorrDiff is its 41x lower cost, not interval quality.
+REPAINT_SIGMA_SCALE_TIMED = 2.4513
 
 
 # ===========================================================================
@@ -241,4 +302,14 @@ DISTATTN_STRIDE = 10
 #: collection (fitted on 20 benchmark cases, held-out coverage 0.898 at the 0.90
 #: level). Multiply the returned uncertainty by this for calibrated intervals.
 DISTATTN_SIGMA_SCALE_TIMED = 1.621
+#: MEASURED 2026-09-04: 20 would be better than this inherited 10 -- significantly so
+#: on four of six metrics (calibrated CRPS -0.00093, vorticity correlation +0.0135,
+#: vorticity RMSE -0.00020, divergence RMSE -0.00012) with the calibrated interval 14%
+#: narrower; 40 is no better than 20. NOT raised, for three reasons: it doubles
+#: inference cost (38 -> ~76 s per field), DISTATTN_SIGMA_SCALE_TIMED below was fitted
+#: at 10 and would need refitting plus a fresh blind check on ocean_bench_v1b, and the
+#: collaborators' existing results were produced at 10. Raising it is a decision about
+#: their work, not just ours. See docs/DEFAULTS_AND_DIALS.md 3b.
 DISTATTN_DEFAULT_N_DRAWS = 10
+#: Ensemble size DISTATTN_SIGMA_SCALE_TIMED was fitted at.
+DISTATTN_FITTED_N_DRAWS = 10

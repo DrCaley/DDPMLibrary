@@ -63,6 +63,7 @@ import numpy as np
 import torch
 
 from . import config as C
+from .calibration import resolve_sigma_scale
 from .distattn import DDPM, TimeCondUNet, ddpm_sample
 from .geo import lat_lon_to_index
 from .inference import resolve_device
@@ -200,6 +201,8 @@ class DistAttn:
         n_draws: int = C.DISTATTN_DEFAULT_N_DRAWS,
         stride: int = C.DISTATTN_STRIDE,
         seed=None,
+        calibrate: bool = True,
+        sigma_scale: Optional[float] = None,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Reconstruct the field from scattered, time-stamped observations.
 
@@ -248,6 +251,16 @@ class DistAttn:
 
         mean_model = arr.mean(axis=0)
         unc_model = arr.std(axis=0) if n_draws > 1 else np.zeros_like(mean_model)
+        if calibrate and n_draws > 1:
+            scale, why = resolve_sigma_scale(
+                obs_list, timed=C.DISTATTN_SIGMA_SCALE_TIMED, override=sigma_scale,
+                n_draws=n_draws, fitted_n_draws=C.DISTATTN_FITTED_N_DRAWS,
+                model="DistAttn")
+            unc_model = unc_model * scale
+            self._last_sigma_scale = (scale, why)
+        else:
+            self._last_sigma_scale = (1.0, "uncalibrated (calibrate=False)"
+                                      if not calibrate else "single draw")
         mean_model[:, self.land_np] = 0.0
         unc_model[:, self.land_np] = 0.0
         return (_model2lib_field(mean_model.astype(np.float32)),

@@ -151,11 +151,10 @@ keeps ensemble members spatially coherent rather than speckled.
 
 ### Loss functions
 
-**Direction network** — four terms:
+**Direction network** — three terms:
 
 ```
 L = w_t*||x0_hat - x0||^2  +  1.0*(1 - cos θ)  +  0.2*(rms(x0_hat)/rms(x0) - 1)^2
-    +  1.0*(1 - ρ(σ_model, σ_emp))
 
 w_t = min(SNR_t, 5) / mean_t[min(SNR_t, 5)]
 ```
@@ -165,7 +164,13 @@ w_t = min(SNR_t, 5) / mean_t[min(SNR_t, 5)]
 | `w_t ||x0_hat - x0||^2` | squared error, weighted by min(SNR, 5) so easy timesteps stop soaking up the gradient |
 | `1.0 (1 - cos θ)` | direction error, scored separately from speed |
 | `0.2 (rms ratio - 1)^2` | penalises amplitude shrinkage — squared error rewards hedging toward the mean, which flattens the field |
-| `1.0 (1 - ρ)` | makes predicted uncertainty correlate with actual error; being a correlation it fixes the pattern, not the width |
+
+A fourth term, `1.0 (1 - ρ(σ_model, σ_emp))`, was **dropped on 2026-09-02**. It
+correlated the model's directional spread across draws against an empirical spread
+map, and existed to make predicted uncertainty track actual error. Measured against
+a matched control it did the reverse — r(σ, error) 0.223 with it, 0.296 without —
+while also degrading vorticity fidelity and widening intervals ~10% at matched
+coverage, for a tied RMSE.
 
 A vorticity term exists in the code and was left switched off (λ = 0).
 
