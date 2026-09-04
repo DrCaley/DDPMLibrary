@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from ddpm_library import StreamDDPM
+from ddpm_library.config import STREAM_SIGMA_SCALE_TIMED
 from ddpm_library.geo import grid_arrays
 
 
@@ -142,3 +143,30 @@ def test_stream_project_priors_flag_changes_input(stream):
     m_off, _ = stream.predict(_obs(), raw_prior, sampler="ddpm",
                               inference_steps=10, seed=0, project_priors=False)
     assert not np.allclose(m_on, m_off)   # projection actually did something
+
+
+def test_stream_calibration_scales_raw_spread_by_the_fitted_factor(stream):
+    """calibrate=True must be exactly the raw spread times the fitted factor.
+
+    Stream flipped from returning RAW spread to calibrated on 2026-09-04. The old
+    docstring told callers to apply the factor themselves, so anyone who did would
+    now double it. Pinning the exact relationship makes that regression loud, and
+    documents that calibrate=False still reproduces the pre-flip behaviour.
+    """
+    obs, pri = _obs(), _priors()
+    _, raw = stream.predict(obs, pri, n_draws=3, inference_steps=5, seed=11,
+                            calibrate=False)
+    _, cal = stream.predict(obs, pri, n_draws=3, inference_steps=5, seed=11,
+                            calibrate=True)
+    om = stream.ocean_mask > 0.5
+    np.testing.assert_allclose(cal[om], raw[om] * STREAM_SIGMA_SCALE_TIMED, rtol=1e-5)
+
+
+def test_stream_sigma_scale_override_beats_the_fitted_factor(stream):
+    obs, pri = _obs(), _priors()
+    _, raw = stream.predict(obs, pri, n_draws=3, inference_steps=5, seed=11,
+                            calibrate=False)
+    _, cal = stream.predict(obs, pri, n_draws=3, inference_steps=5, seed=11,
+                            calibrate=True, sigma_scale=2.0)
+    om = stream.ocean_mask > 0.5
+    np.testing.assert_allclose(cal[om], raw[om] * 2.0, rtol=1e-5)

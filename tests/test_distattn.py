@@ -10,7 +10,8 @@ import numpy as np
 import pytest
 
 from ddpm_library.config import (
-    DISTATTN_H, DISTATTN_OCEAN_MASK_PATH, DISTATTN_T, DISTATTN_W,
+    DISTATTN_H, DISTATTN_OCEAN_MASK_PATH, DISTATTN_SIGMA_SCALE_TIMED,
+    DISTATTN_T, DISTATTN_W,
     DISTATTN_WEIGHTS_PATH, LAT_MAX, LAT_MIN, LON_MAX, LON_MIN, OCEAN_H, OCEAN_W,
 )
 
@@ -209,3 +210,29 @@ def test_mask_is_a_subset_of_the_shared_grid(model):
     shared = ~np.asarray(np.load(CORRDIFF_GRID_PATH)["land_mask"]).astype(bool)
     assert model.ocean_np.shape == (DISTATTN_H, DISTATTN_W) == shared.shape
     assert not (model.ocean_np & ~shared).any()
+
+
+@_needs_assets
+def test_distattn_calibration_scales_raw_spread_by_the_fitted_factor(model, obs):
+    """calibrate=True must be exactly the raw spread times the fitted factor.
+
+    DistAttn flipped from returning RAW spread to calibrated on 2026-09-04, and its
+    old docstring instructed callers to multiply by 1.621 themselves -- so anyone
+    following it would now apply the factor twice.
+    """
+    _, raw = model.predict(obs, n_draws=_DRAWS, stride=_STRIDE, seed=11,
+                           calibrate=False)
+    _, cal = model.predict(obs, n_draws=_DRAWS, stride=_STRIDE, seed=11,
+                           calibrate=True)
+    om = model.ocean_mask > 0.5
+    np.testing.assert_allclose(cal[om], raw[om] * DISTATTN_SIGMA_SCALE_TIMED, rtol=1e-5)
+
+
+@_needs_assets
+def test_distattn_sigma_scale_override_beats_the_fitted_factor(model, obs):
+    _, raw = model.predict(obs, n_draws=_DRAWS, stride=_STRIDE, seed=11,
+                           calibrate=False)
+    _, cal = model.predict(obs, n_draws=_DRAWS, stride=_STRIDE, seed=11,
+                           calibrate=True, sigma_scale=3.0)
+    om = model.ocean_mask > 0.5
+    np.testing.assert_allclose(cal[om], raw[om] * 3.0, rtol=1e-5)
