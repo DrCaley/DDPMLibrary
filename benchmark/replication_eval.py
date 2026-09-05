@@ -6,7 +6,7 @@ fresh diffusion seeds. One run answers four reviewer questions at once:
   1. Does the headline ranking replicate on independent cases?
   2. Are the results seed-sensitive? (every random choice here is new)
   3. Do the SHIPPED conformal factors hold out-of-sample? (corrdiff 2.1801,
-     distattn 1.621, stream 3.141 -- fitted on v1, applied blind to v1b)
+     distattn 1.3592, stream 3.141 -- fitted on v1, applied blind to v1b)
   4. Is RePaint a contender? It ties CorrDiff on accuracy but has never had an
      uncertainty column. Here it gets sigma, CRPS, and its own conformal fit
      (split within v1b, since no v1 fit exists for it).

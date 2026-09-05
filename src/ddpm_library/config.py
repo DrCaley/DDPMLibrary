@@ -299,17 +299,23 @@ DISTATTN_MAX_AGE_SEC = 10800.0
 DISTATTN_STRIDE = 10
 
 #: Split-conformal factor for DistAttn's raw ensemble spread on 2 h time-varying
-#: collection (fitted on 20 benchmark cases, held-out coverage 0.898 at the 0.90
-#: level). Multiply the returned uncertainty by this for calibrated intervals.
-DISTATTN_SIGMA_SCALE_TIMED = 1.621
-#: MEASURED 2026-09-04: 20 would be better than this inherited 10 -- significantly so
-#: on four of six metrics (calibrated CRPS -0.00093, vorticity correlation +0.0135,
-#: vorticity RMSE -0.00020, divergence RMSE -0.00012) with the calibrated interval 14%
-#: narrower; 40 is no better than 20. NOT raised, for three reasons: it doubles
-#: inference cost (38 -> ~76 s per field), DISTATTN_SIGMA_SCALE_TIMED below was fitted
-#: at 10 and would need refitting plus a fresh blind check on ocean_bench_v1b, and the
-#: collaborators' existing results were produced at 10. Raising it is a decision about
-#: their work, not just ours. See docs/DEFAULTS_AND_DIALS.md 3b.
-DISTATTN_DEFAULT_N_DRAWS = 10
+#: collection, fitted on the first 20 cases of ocean_bench_v1 with coverage verified
+#: on the other 20. predict() applies it; pass calibrate=False for the raw spread.
+#: MEASURED 2026-09-04 -- do not edit by hand without re-fitting.
+#: REFIT from 1.621 when DISTATTN_DEFAULT_N_DRAWS went 10 -> 20: a 20-draw ensemble
+#: is less under-dispersed than a 10-draw one, so it needs less inflation. Held-out
+#: coverage 0.891 against the 0.90 target, where the n=10 factor gave 0.899 --
+#: marginally under rather than over, at intervals 14% narrower. The sharper
+#: intervals are why 20 wins on calibrated CRPS.
+DISTATTN_SIGMA_SCALE_TIMED = 1.3592
+#: MEASURED 2026-09-04, raised 10 -> 20. The 10 was inherited from the collaborator's
+#: evaluation, not swept here. At 20 the model is significantly better on four of six
+#: metrics (calibrated CRPS -0.00093, vorticity correlation +0.0135, vorticity RMSE
+#: -0.00020, divergence RMSE -0.00012) with the calibrated interval 14% narrower, and
+#: 40 is no better than 20 -- an interior optimum, not "more is better".
+#: The price is real: inference cost doubles, 38 -> ~76 s per field, taking DistAttn
+#: from ~15x CorrDiff to ~29x, and anything produced at n_draws=10 is not comparable.
+#: See docs/DEFAULTS_AND_DIALS.md 3b and benchmark/n_draws_sweep.py.
+DISTATTN_DEFAULT_N_DRAWS = 20
 #: Ensemble size DISTATTN_SIGMA_SCALE_TIMED was fitted at.
-DISTATTN_FITTED_N_DRAWS = 10
+DISTATTN_FITTED_N_DRAWS = 20

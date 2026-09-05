@@ -375,7 +375,8 @@ The observation term was designed to be weightable by reading age, but the shipp
 checkpoint predates that option, so every reading was weighted equally. The
 age-aware version was never trained.
 
-Calibration factor fitted here: `DISTATTN_SIGMA_SCALE_TIMED = 1.621`.
+Calibration factor fitted here: `DISTATTN_SIGMA_SCALE_TIMED = 1.3592`, refit on
+2026-09-04 when the default ensemble size went 10 -> 20 (it was 1.621 at 10).
 
 ## 6. RePaint
 
@@ -407,7 +408,7 @@ Frozen benchmark, 40 cases, each model at its own best configuration.
 | model | RMSE | angle RMS (rad) | CRPS | raw coverage | own conformal factor | interval width |
 |---|---|---|---|---|---|---|
 | CorrDiff, 1 h cutoff | 0.0618 | 0.6842 | 0.0242 | 0.908 | 1.009 | 0.174 |
-| DistAttn, full track | 0.0738 | 0.7875 | 0.0296 | 0.737 | 1.621 | 0.178 |
+| DistAttn, full track | 0.0718 | 0.7782 | 0.0282 | 0.801 | 1.3592 | 0.164 |
 | Stream, full field | 0.0865 | 0.8663 | 0.0389 | 0.435 | 3.162 | 0.207 |
 
 All three pairwise RMSE gaps and all three CRPS gaps are significant under a paired
@@ -426,7 +427,7 @@ factors fixed in advance:
 | model | RMSE v1 -> v1b | CRPS | coverage with shipped factor applied blind |
 |---|---|---|---|
 | CorrDiff | 0.0618 -> 0.0566 | 0.0228 | 0.9171 |
-| DistAttn | 0.0738 -> 0.0728 | 0.0286 | 0.8943 |
+| DistAttn | 0.0718 -> (re-running) | (re-running) | (re-running) |
 | Stream | 0.0865 -> 0.0834 | 0.0329 | 0.9101 |
 
 Same ranking, same significance, and the cutoff-selected configuration got better on

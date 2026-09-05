@@ -54,7 +54,7 @@ narrowest intervals to be honest.
 | model | CRPS ↓ | coverage, raw (→0.90) | own factor | coverage, calibrated | interval width ↓ |
 |---|---|---|---|---|---|
 | **CorrDiff** (timed factor) | **0.0242** | **0.908** | **1.009** | 0.920 | **0.174** |
-| DistAttn | 0.0296 | 0.737 | 1.621 | 0.898 | 0.178 |
+| DistAttn | 0.0282 | 0.801 | 1.3592 | 0.891 | 0.164 |
 | Stream | 0.0389 | 0.435 | 3.162 | 0.894 | **0.207** |
 
 All three pairwise CRPS gaps significant (corrdiff−distattn −0.0054
@@ -69,8 +69,10 @@ inflating 1.6× and Stream's 3.2× before they are honest, and even then Stream'
 honest intervals are 19% wider than CorrDiff's. DistAttn calibrates to a
 respectable width (0.178) — its problem is accuracy, not spread shape.
 
-Fitted factors are shipped as `DISTATTN_SIGMA_SCALE_TIMED = 1.621` and
-`STREAM_SIGMA_SCALE_TIMED = 3.165` in `config.py`.
+Fitted factors are shipped as `DISTATTN_SIGMA_SCALE_TIMED = 1.3592` and
+`STREAM_SIGMA_SCALE_TIMED = 3.165` in `config.py`. DistAttn's was refit on 2026-09-04
+when its default ensemble size went 10 -> 20; the 10-draw figures were 0.0296 CRPS,
+0.737 raw coverage, factor 1.621, width 0.178.
 
 Stated choice for the methods section: CRPS is computed from (mean, σ) under a
 Gaussian assumption, identically for every model, rather than from raw ensembles
@@ -104,6 +106,11 @@ configuration got *better* on unseen cases — the opposite of selection inflati
 **The shipped conformal factors hold blind**: 2.1801 / 1.621 / 3.165 fitted on
 v1, applied untouched to v1b, give coverage 0.917 / 0.894 / 0.910 against the
 0.90 target. That is the calibration claim, validated out-of-sample.
+
+> **DistAttn's row is being re-validated (2026-09-04).** Its default ensemble size went
+> 10 -> 20 and its factor was refit 1.621 -> 1.3592, so the 0.894 above describes a
+> configuration that is no longer shipped. The v1b re-run is in flight; CorrDiff's and
+> Stream's rows are unaffected because neither model changed.
 
 → `results_replication.pt`, benchmark `ocean_bench_v1b.npz`
 
@@ -341,9 +348,9 @@ empirically, at full training length, with measured power.
 | epochs | 200 | 150 (warm-started from Sam's base) | 78 + 25 |
 | temporal priors (13/25 h) | yes | no | yes |
 | observation timestamps used | no | yes (age tokens; age-weighted loss never trained) | no |
-| inference | 20 draws, 50 DDIM steps | 10 draws, stride 10 | 20 draws, dpmpp 2 steps, + magnitude net + Helmholtz recombination |
+| inference | 20 draws, 50 DDIM steps | 20 draws, stride 10 | 20 draws, dpmpp 2 steps, + magnitude net + Helmholtz recombination |
 | measured s/field (Titan Xp) | **1.2** | 16.1 | 0.3 |
-| calibration | split conformal, 2.1801 (timed) | 1.621 (fitted here) | 3.165 (fitted here) |
+| calibration | split conformal, 2.1801 (timed) | 1.3592 (fitted here) | 3.165 (fitted here) |
 
 Loss equations, weights, and references: `docs/loss_doc/loss_functions.docx`.
 

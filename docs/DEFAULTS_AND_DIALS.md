@@ -119,7 +119,7 @@ Identical shape to CorrDiff: below the default costs real accuracy, above it buy
 nothing. RMSE at 40 matches 20 to five decimals, so 20 is the saturation point.
 The factor moves 3.484 -> 3.129 across the sweep, the same non-portability as §1.
 
-## 3b. DistAttn's ensemble size: 20 is better than the inherited 10 (not applied)
+## 3b. DistAttn's ensemble size: the inherited 10 was wrong, raised to 20
 
 The one dial that came back wrong. `DISTATTN_DEFAULT_N_DRAWS` was 10, inherited from
 the collaborator's evaluation rather than measured here. Same protocol as §1 and §3 --
@@ -153,18 +153,20 @@ Read the coverage column alongside it: at n=10 the held-out coverage is 0.918, i
 **over-covering**, and at n=20 it is 0.891, just under nominal. Part of what 20 buys is
 simply a less conservative interval, which is why the width drops as the CRPS improves.
 
-**Measured, not applied.** The default is still 10 as of 2026-09-04, because raising it
-is not a one-line change:
+**Applied 2026-09-04**, after putting the trade-off to the collaborators rather than
+taking it unilaterally. Raising it was not a one-line change, and all three consequences
+were carried through:
 
 1. It **doubles the cost** -- 38.1 s/field to ~76 s, taking DistAttn from 15x CorrDiff
-   to ~29x (§4). It is already the most expensive of the three paper models.
-2. `DISTATTN_SIGMA_SCALE_TIMED = 1.621` was **fitted at n_draws=10**. Raising the default
-   means refitting it *and* re-running the blind check on `ocean_bench_v1b`, or the
-   paper's calibration claim ("the shipped factors hold blind", `PAPER_NUMBERS.md`)
-   would describe a configuration that no longer ships. That is ~1.5 h of inference.
-3. The collaborators' existing results were produced at 10, so raising it invalidates
-   their numbers rather than merely shifting ours. That makes it a decision about their
-   work, and it was put to them rather than taken unilaterally.
+   to ~29x (§4). It was already the most expensive of the three paper models, and this
+   makes it more so. Nothing about the model ranking changes; DistAttn stays third.
+2. `DISTATTN_SIGMA_SCALE_TIMED` was **fitted at n_draws=10** (1.621), so it was refit at
+   20 with the same harness that produced the original: **1.3592**, held-out coverage
+   0.891 against the 0.90 target. A 20-draw ensemble is less under-dispersed than a
+   10-draw one, so it needs less inflation. The blind check on `ocean_bench_v1b` is being
+   re-run so the calibration claim in `PAPER_NUMBERS.md` describes what actually ships.
+3. Anything the collaborators produced at 10 is **not comparable** -- this changes the
+   predictions themselves, not just the interval width the conformal fixes shifted.
 
 The model ranking does not change either way -- DistAttn stays third of the three.
 

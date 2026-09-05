@@ -43,7 +43,7 @@ The sampler is stochastic, so ``n_draws > 1`` gives a real per-cell ensemble
 spread. The returned ``uncertainty`` is the RAW ensemble standard deviation and
 is under-dispersed (raw coverage 0.737 at the 0.90 level on the realistic
 benchmark). Multiply by :data:`~ddpm_library.config.DISTATTN_SIGMA_SCALE_TIMED`
-(1.621, split-conformal, held-out coverage 0.898) for calibrated intervals on
+(1.3592, split-conformal, held-out coverage 0.891) for calibrated intervals on
 time-varying collection.
 
 Cost

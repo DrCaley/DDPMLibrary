@@ -389,11 +389,12 @@ index). Two observations at the same grid cell get averaged.
     guard reads `FITTED`; changing a default without refitting now warns.
   - **Ensemble sizes confirmed** for CorrDiff and Stream: below the default costs real
     accuracy on every metric, above it buys nothing. `benchmark/n_draws_sweep.py`.
-  - **DistAttn's ensemble size is measurably wrong at 10** — 20 is significantly better
-    on four of six metrics with intervals 14% narrower — but the default is unchanged.
-    Raising it doubles that model's cost, requires refitting `DISTATTN_SIGMA_SCALE_TIMED`
-    (fitted at 10) plus a fresh blind check on `ocean_bench_v1b`, and invalidates
-    collaborator results produced at 10. Measured and documented, not applied:
+  - **`DISTATTN_DEFAULT_N_DRAWS` raised 10 → 20.** The inherited 10 was not swept here;
+    at 20 the model is significantly better on four of six metrics with intervals 14%
+    narrower, and 40 is no better than 20. `DISTATTN_SIGMA_SCALE_TIMED` was refit
+    accordingly, 1.621 → 1.3592 (held-out coverage 0.891). Two things to know: DistAttn's
+    inference cost doubles (~38 → ~76 s per field), and anything produced at `n_draws=10`
+    is not comparable — this changes the predictions, not just the interval width.
     `docs/DEFAULTS_AND_DIALS.md` §3b.
   - **Per-model inference cost measured** for all six models. Stream is the cheapest
     of the three paper models at 0.2 s/field, 13x cheaper than CorrDiff; DistAttn is
