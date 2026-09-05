@@ -103,14 +103,17 @@ Identical ranking, all pairwise gaps significant again (corrdiff−distattn
 −0.0162 CI [−0.0232, −0.0095]; corrdiff−stream −0.0268 CI [−0.0335, −0.0207]), and the cutoff-selected
 configuration got *better* on unseen cases — the opposite of selection inflation.
 
-**The shipped conformal factors hold blind**: 2.1801 / 1.621 / 3.165 fitted on
-v1, applied untouched to v1b, give coverage 0.917 / 0.894 / 0.910 against the
-0.90 target. That is the calibration claim, validated out-of-sample.
+**The shipped conformal factors hold blind**: 2.1801 / 1.3592 / 3.165 fitted on v1,
+applied untouched to v1b, give coverage **0.914 / 0.883 / 0.911** against the 0.90
+target. That is the calibration claim, validated out-of-sample.
 
-> **DistAttn's row is being re-validated (2026-09-04).** Its default ensemble size went
-> 10 -> 20 and its factor was refit 1.621 -> 1.3592, so the 0.894 above describes a
-> configuration that is no longer shipped. The v1b re-run is in flight; CorrDiff's and
-> Stream's rows are unaffected because neither model changed.
+**DistAttn is the one that does not quite hold.** At its previous `n_draws = 10` and
+factor 1.621 it covered 0.894 blind; at the 20 draws it now ships, with factor 1.3592,
+it covers **0.883** at intervals 14% narrower (width 0.154 against 0.178). So the
+sharper intervals bought by the larger ensemble cost about a point of out-of-sample
+coverage, and DistAttn's blind coverage sits ~1.7 points under nominal. Report it that
+way rather than rounding to 0.90 -- it is the one model whose interval should not be
+read as a hard 90% floor. CorrDiff and Stream both land above target.
 
 → `results_replication.pt`, benchmark `ocean_bench_v1b.npz`
 

@@ -49,12 +49,17 @@ def fresh(rows, hours):
     return rows[ages <= hours]
 
 
-# name -> (fn, shipped factor applied to the returned sigma; corrdiff's predict
-# already applies its factor internally via sigma_scale, so 1.0 here)
+# name -> (fn, shipped factor applied here to the returned RAW sigma).
+# Every model returns raw spread (calibrate=False) and the factor is applied below,
+# so the blind check is visibly the same operation for all of them.
+# NB corrdiff used to pass sigma_scale= with calibrate=False and carry 1.0 here, on the
+# assumption predict() would apply it internally. The 2026-09-02 audit made
+# calibrate=False mean "no scaling at all" and ignore sigma_scale, which silently turned
+# this row into RAW spread -- v1b coverage 0.654 instead of 0.914. Keep it uniform.
 MODELS = {
     "corrdiff (1h)": (lambda r, p, i: cd.predict(
         [tuple(x) for x in fresh(r, 1.0)], p, n_draws=20, seed=SEED + i,
-        sigma_scale=C.CORRDIFF_SIGMA_SCALE_TIMED, calibrate=False), 1.0),
+        calibrate=False), float(C.CORRDIFF_SIGMA_SCALE_TIMED)),
     "distattn": (lambda r, p, i: da.predict(
         [tuple(x) for x in r], n_draws=C.DISTATTN_DEFAULT_N_DRAWS, seed=SEED + i, calibrate=False),
         float(C.DISTATTN_SIGMA_SCALE_TIMED)),

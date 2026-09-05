@@ -427,7 +427,7 @@ factors fixed in advance:
 | model | RMSE v1 -> v1b | CRPS | coverage with shipped factor applied blind |
 |---|---|---|---|
 | CorrDiff | 0.0618 -> 0.0566 | 0.0228 | 0.9171 |
-| DistAttn | 0.0718 -> (re-running) | (re-running) | (re-running) |
+| DistAttn | 0.0718 -> 0.0710 | 0.0274 | 0.8826 |
 | Stream | 0.0865 -> 0.0834 | 0.0329 | 0.9101 |
 
 Same ranking, same significance, and the cutoff-selected configuration got better on
