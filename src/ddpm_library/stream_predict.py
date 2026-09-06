@@ -311,6 +311,28 @@ class StreamDDPM:
                 f"assembled cond has {cond.shape[0]} channels but model expects "
                 f"{self.cond_ch}; check priors/geometry configuration.")
 
+        # `coupled_magnitude` standardizes each draw's magnitude ACROSS the
+        # ensemble, so n_draws is structural here, not a speed/quality dial. At
+        # n_draws=1 the z-score is identically zero, so the draw's own magnitude
+        # anomaly is discarded and its speed is set to the heteroscedastic
+        # network's mean everywhere; what magnitude variation survives comes only
+        # from the Helmholtz projection acting on a different direction field.
+        # Stacking single-draw calls therefore does not reconstruct an n_draws=20
+        # ensemble. Measured on bench case 0: RMSE 0.0403 at 1 draw against
+        # 0.0384 at 20.
+        if n_draws < C.STREAM_MIN_COUPLED_DRAWS:
+            warnings.warn(
+                f"StreamDDPM: n_draws={n_draws} is below "
+                f"{C.STREAM_MIN_COUPLED_DRAWS}. The coupled-magnitude fuse "
+                f"standardizes magnitudes across the ensemble, so at this size "
+                f"the magnitude carries little of the diffusion's own spread"
+                + (" (at n_draws=1, none of it: every draw is given the "
+                   "network's mean speed before projection)." if n_draws == 1
+                   else ".")
+                + " Averaging several small calls is not equivalent to one call "
+                  "with the same total number of draws.",
+                RuntimeWarning, stacklevel=2)
+
         # --- diffusion ensemble (direction) + coupled magnitude fuse ---
         if sampler == "dpmpp":
             steps = inference_steps if inference_steps is not None else C.STREAM_DPMPP_STEPS

@@ -116,6 +116,12 @@ STREAM_DEFAULT_N_DRAWS = 20  # matches CorrDiff; every other diffusion predictor
 #: Ensemble size STREAM_SIGMA_SCALE_TIMED was fitted at (see CORRDIFF_FITTED_N_DRAWS).
 STREAM_FITTED_N_DRAWS = 20
 
+#: Below this, Stream's coupled-magnitude fuse stops carrying diffusion spread in
+#: the magnitude: it standardizes each draw's magnitude across the ensemble, so a
+#: one-draw "ensemble" has a z-score of exactly zero and every cell falls back to
+#: the heteroscedastic network's mean speed. Not a speed/quality dial.
+STREAM_MIN_COUPLED_DRAWS = 5
+
 #: Split-conformal factor for Stream's raw ensemble spread, at the CURRENT
 #: defaults (full_field=True, n_draws=20, dpmpp with STREAM_DPMPP_STEPS steps) on
 #: 2 h time-varying collection. Fitted on 20 cases of ocean_bench_v1, held-out
