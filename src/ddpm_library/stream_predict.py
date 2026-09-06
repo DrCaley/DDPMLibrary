@@ -291,6 +291,8 @@ class StreamDDPM:
         if not obs_list:
             raise ValueError(
                 "At least one observation is required; got an empty sequence.")
+        if n_draws < 1:
+            raise ValueError(f"n_draws must be >= 1; got {n_draws}.")
 
         # --- front-end: same rasterizer as DDPM/VCNN, then to model grid ---
         sparse_u, sparse_v, missing_mask = observations_to_channels(obs_list)
@@ -299,6 +301,10 @@ class StreamDDPM:
         obs_field_std = self._standardize(obs_field_model).astype(np.float32)
         obs_field_std[:, self.land_np] = 0.0
         path_mask = (_lib2model_2d(missing_mask) < 0.5) & self.ocean_np  # observed ∩ ocean
+        if not path_mask.any():
+            raise ValueError(
+                "no observation fell on an ocean cell of the model grid; "
+                "check the observation coordinates.")
 
         priors_std = self._build_priors(priors, project=project_priors)
 
