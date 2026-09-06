@@ -12,6 +12,7 @@ import numpy as np, torch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src")); sys.path.insert(0, str(ROOT / "benchmark"))
+from _paths import DEV  # noqa: E402
 from ddpm_library import CorrDiff, metrics                           # noqa: E402
 import _score                                                         # noqa: E402
 
@@ -47,7 +48,7 @@ def run(model, obs_arr, sensor_noise):
         M.append(np.asarray(m, np.float32)); S.append(np.asarray(s, np.float32))
     return np.stack(M), np.stack(S)
 
-cd = CorrDiff(device="mps")
+cd = CorrDiff(device=DEV)
 sigma = NOISE_FRAC * float(np.mean(cd.data_std))
 noisy = obs.copy().astype(np.float64)
 for i in range(n):

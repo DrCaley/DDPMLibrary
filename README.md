@@ -371,6 +371,23 @@ index). Two observations at the same grid cell get averaged.
 ## Changelog
 
 - **0.9.0** — Calibration guards, a corrected default, and a cleanup pass.
+  - **DistAttn and RePaint draws no longer alias across cases.** Both seeded draw
+    `k` with `seed + k`, and every benchmark calls them with `seed = BASE + case`,
+    so case *i* draw *k* and case *i+1* draw *k-1* got the same seed and the same
+    noise — at `n_draws=20`, neighbouring cases shared 19 of their 20 draws. The
+    cases were not independent, and noise leaked across the split-conformal
+    fit/verify boundary that the held-out coverage number exists to establish.
+    Stream already spread its seeds and CorrDiff draws its ensemble from one
+    per-case generator, so both were unaffected. The scheme now lives once, as
+    `inference.draw_seed`, and every loop sampler calls it. Stream's seeds are
+    numerically unchanged; **DistAttn and RePaint predictions move**, and their
+    conformal factors were refit.
+  - **The benchmark scripts run off the Mac.** Fourteen of them hardcoded
+    `device="mps"`, so none ran on a GPU box; they now take `DEV` from
+    `benchmark/_paths.py`, defaulting to `"auto"`.
+  - **DistAttn is scored at its own default in every cross-model table.**
+    `final_comparison.py`, `run_reference.py` and `uncertainty_spatial_value.py`
+    ran it at `n_draws=10` while CorrDiff and Stream got 20.
   - **The conformal factor does not transfer across sampling settings.** It runs
     5.053 / 4.116 / 3.805 / 3.688 at `n_draws` = 5 / 10 / 20 / 40 on CorrDiff, so a
     factor fitted at 20 and used at 5 under-covers by about a third. All four

@@ -32,6 +32,24 @@ from .config import (
 from .model import HelmholtzSplitSchedule, MyUNet_Helmholtz_Split_FiLM_MultiRes
 
 
+#: Spacing between the seed blocks of consecutive base seeds. Larger than any
+#: ensemble size the library will ever draw, which is what keeps the blocks apart.
+_SEED_STRIDE = 100003
+
+
+def draw_seed(base_seed: int, k: int) -> int:
+    """RNG seed for draw ``k`` of the ensemble at ``base_seed``.
+
+    Callers score a benchmark with ``seed = BASE + case``, so a naive
+    ``base_seed + k`` puts case ``i`` draw ``k`` and case ``i+1`` draw ``k-1`` on
+    the same seed: the two draws then share their noise, the cases stop being
+    independent, and noise leaks between the conformal fit and verify halves.
+    Multiplying the base by a stride wider than any ensemble keeps each case's
+    seeds in its own block. Every sampler in the library uses this.
+    """
+    return (int(base_seed) + 1) * _SEED_STRIDE + int(k)
+
+
 def resolve_device(device: str = "auto") -> torch.device:
     if device == "auto":
         if torch.cuda.is_available():

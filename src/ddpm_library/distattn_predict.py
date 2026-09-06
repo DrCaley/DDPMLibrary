@@ -66,7 +66,7 @@ from . import config as C
 from .calibration import resolve_sigma_scale
 from .distattn import DDPM, TimeCondUNet, ddpm_sample
 from .geo import lat_lon_to_index
-from .inference import resolve_device
+from .inference import draw_seed, resolve_device
 
 
 def _model2lib_field(a: np.ndarray) -> np.ndarray:
@@ -219,7 +219,8 @@ class DistAttn:
         stride : int
             Reverse-chain step size; one draw costs ``T / stride`` network calls.
         seed : int or None
-            Base RNG seed; draw ``k`` uses ``seed + k``. ``None`` (the default)
+            Base RNG seed; draw ``k`` uses ``(seed + 1) * 100003 + k``, the
+            same spread ``stream`` uses. ``None`` (the default)
             leaves the global RNG untouched, so draws are not reproducible.
 
         Returns
@@ -244,8 +245,8 @@ class DistAttn:
 
         draws = []
         for k in range(n_draws):
-            if seed is not None:               # seed=None -> non-reproducible draws,
-                torch.manual_seed(seed + k)    # matching the rest of the library
+            if seed is not None:               # seed=None -> non-reproducible draws
+                torch.manual_seed(draw_seed(seed, k))
             draws.append(ddpm_sample(eps_fn, self.diffusion, self.land_np,
                                      stride=stride, device=str(self.device)).numpy())
         arr = np.stack(draws, axis=0)          # (K, 2, 94, 44), m/s

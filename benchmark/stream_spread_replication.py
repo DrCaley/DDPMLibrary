@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from ddpm_library import StreamDDPM, metrics                 # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _paths import MODELS_DIR  # noqa: E402
+from _paths import DEV, MODELS_DIR  # noqa: E402
 from _vorticity import curl  # noqa: E402
 
 LEVEL, SEED, z = 0.90, 20260901, 1.6448536269514722
@@ -29,7 +29,7 @@ n, half = len(truth), len(truth) // 2
 
 rows, per_case = {}, {}
 for name, path in ARMS.items():
-    st = StreamDDPM(device="mps", dir_weights_path=path)
+    st = StreamDDPM(device=DEV, dir_weights_path=path)
     M, S, vr, vc = [], [], [], []
     for i in range(n):
         with warnings.catch_warnings():

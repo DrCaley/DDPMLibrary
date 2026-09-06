@@ -52,7 +52,7 @@ for k in CFG:
     print(f"{k:<40}{S[k]['rmse_vector'].mean():>9.4f}{S[k]['angle_rms_rad'].mean():>11.4f}")
 
 base = "shipped defaults (n_draws=1, divfree)"
-print(f"\ncost of the shipped defaults, paired vs best:")
+print("\ncost of the shipped defaults, paired vs best:")
 for m in ("rmse_vector", "angle_rms_rad"):
     d, lo, hi = score.bootstrap_ci(S[base][m] - S["best (n_draws=20, +divergent)"][m])
     t = "significant" if (lo > 0) == (hi > 0) else "TIED"

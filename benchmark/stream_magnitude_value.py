@@ -19,6 +19,7 @@ import numpy as np, torch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src")); sys.path.insert(0, str(ROOT / "benchmark"))
+from _paths import DEV  # noqa: E402
 import ddpm_library.stream_predict as SP                            # noqa: E402
 from ddpm_library import StreamDDPM, metrics                        # noqa: E402
 from ddpm_library.stream.conditioning import helmholtz_project      # noqa: E402
@@ -40,7 +41,7 @@ def _no_mag_fuse(members, cond, land_np, het_net, hsm, hss, het_clip, data_std, 
 
 def run(use_mag):
     SP.fuse_coupled = _real_fuse if use_mag else _no_mag_fuse
-    st = StreamDDPM(device="mps")
+    st = StreamDDPM(device=DEV)
     M, S = [], []
     for i in range(n):
         with warnings.catch_warnings():

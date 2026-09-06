@@ -101,7 +101,7 @@ for k, r in rows.items():
           f"{r['width_conformal']:>8.4f}")
 
 names = list(MODELS)
-print(f"\npaired CRPS differences:")
+print("\npaired CRPS differences:")
 for i, a in enumerate(names):
     for b in names[i+1:]:
         d, lo, hi = score.bootstrap_ci(per_case[a]["crps"] - per_case[b]["crps"])

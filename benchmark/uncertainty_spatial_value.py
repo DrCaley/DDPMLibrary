@@ -17,11 +17,11 @@ from scipy.ndimage import gaussian_filter
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+from _paths import DEV  # noqa: E402
 from ddpm_library import CorrDiff, DistAttn, StreamDDPM, metrics   # noqa: E402
-import ddpm_library.config as C                                    # noqa: E402
+from ddpm_library import config as C                               # noqa: E402
 
 LEVEL, SEED, z = 0.90, 20260830, 1.6448536269514722
-DEV = "mps"
 TREATMENTS = [0.0, 0.8, 3.2, 12.8, "const"]
 
 b = np.load(ROOT / "benchmark" / "ocean_bench_v1.npz")
@@ -68,8 +68,9 @@ MODELS["corrdiff (1h, 20 draws)"] = lambda i, cd=cd: cd.predict(
     [tuple(x) for x in fresh(obs_all[i], 1.0)], priors_all[i],
     n_draws=20, seed=SEED + i, calibrate=False)
 da = DistAttn(device=DEV)
-MODELS["distattn (10 draws)"] = lambda i, da=da: da.predict(
-    [tuple(x) for x in obs_all[i]], n_draws=10, seed=SEED + i, calibrate=False)
+MODELS[f"distattn ({C.DISTATTN_DEFAULT_N_DRAWS} draws)"] = lambda i, da=da: da.predict(
+    [tuple(x) for x in obs_all[i]], n_draws=C.DISTATTN_DEFAULT_N_DRAWS,
+    seed=SEED + i, calibrate=False)
 st = StreamDDPM(device=DEV)
 MODELS["stream (20 draws, raw sig)"] = lambda i, st=st: st.predict(
     [tuple(x) for x in obs_all[i]], priors_all[i], n_draws=20, seed=SEED + i,

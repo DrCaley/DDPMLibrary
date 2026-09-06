@@ -27,10 +27,11 @@ import numpy as np, torch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src")); sys.path.insert(0, str(ROOT / "benchmark"))
+from _paths import DEV  # noqa: E402
 import ddpm_library.stream_predict as SP                              # noqa: E402
 from ddpm_library import StreamDDPM, metrics                          # noqa: E402
 from ddpm_library.stream.conditioning import (                        # noqa: E402
-    predict_speed_mean_sigma, coupled_magnitude, helmholtz_project)
+    predict_speed_mean_sigma, coupled_magnitude)
 import _score                                                          # noqa: E402
 from _vorticity import interior_ocean_mask                             # noqa: E402
 
@@ -63,7 +64,7 @@ def mean_abs_div(field):
 
 def run(reproject, vcnn, label):
     SP.fuse_coupled = _real_fuse if reproject else _fuse_no_reproject
-    st = StreamDDPM(device="mps")
+    st = StreamDDPM(device=DEV)
     M, S, dv = [], [], []
     for i in range(n):
         with warnings.catch_warnings():

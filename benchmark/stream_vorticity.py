@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from ddpm_library import StreamDDPM                       # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _paths import MODELS_DIR  # noqa: E402
+from _paths import DEV, MODELS_DIR  # noqa: E402
 from _vorticity import curl  # noqa: E402
 
 BENCH = ROOT / "benchmark" / "ocean_bench_v1.npz"
@@ -80,7 +80,7 @@ if missing:
 out = {}
 for nd in (20, 1):
     for name, path in ARMS.items():
-        st = StreamDDPM(device="mps", dir_weights_path=path)
+        st = StreamDDPM(device=DEV, dir_weights_path=path)
         rows = []
         for i in range(len(truth)):
             pred = st.predict([tuple(x) for x in obs_all[i]], priors_all[i],

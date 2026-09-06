@@ -16,6 +16,7 @@ from __future__ import annotations
 import numpy as np
 import torch
 
+from ..inference import draw_seed
 from .diffusion import eps_wrapper_for, x0_from_output
 
 
@@ -81,12 +82,12 @@ def ensemble_infer(stream_model, diffusion, cond, land_np, *, n_members,
                    inference_steps, device, base_seed=0, pred_type=None):
     """Draw ``n_members`` diverse conditional samples from the SAME cond.
 
-    Per-member seed ``(base_seed + 1) * 100003 + k`` matches the research
-    ``ensemble_infer`` exactly. Returns a list of (2, H, W) numpy arrays.
+    Per-member seed is :func:`~ddpm_library.inference.draw_seed`, which matches
+    the research ``ensemble_infer`` exactly. Returns a list of (2, H, W) numpy arrays.
     """
     members = []
     for k in range(max(1, n_members)):
-        seed = (base_seed + 1) * 100003 + k
+        seed = draw_seed(base_seed, k)
         members.append(sample_one(
             stream_model, diffusion, cond, land_np,
             inference_steps=inference_steps, device=device,

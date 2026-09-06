@@ -60,7 +60,7 @@ import torch
 
 from . import config as C
 from .calibration import resolve_sigma_scale
-from .inference import resolve_device
+from .inference import draw_seed, resolve_device
 from .rasterize import observations_to_channels
 from .repaint import DDPM, SAMPLERS, Repaint
 
@@ -200,8 +200,8 @@ class _RePaintBase:
         infer = SAMPLERS[sampler]
         draws = []
         for k in range(n_draws):
-            if seed is not None:               # seed=None -> non-reproducible draws,
-                torch.manual_seed(seed + k)    # matching the rest of the library
+            if seed is not None:               # seed=None -> non-reproducible draws
+                torch.manual_seed(draw_seed(seed, k))
             draws.append(infer(
                 self.model, self.diffusion, x0_known_t, path_mask, self.land_np,
                 cond=cond_t, device=str(self.device), stride=stride,
@@ -312,7 +312,8 @@ class RePaint(_RePaintBase):
         stride : int
             Step through the reverse chain; 1 uses all T steps (published setting).
         seed : int or None
-            Base RNG seed; draw ``k`` uses ``seed + k``. ``None`` (the default)
+            Base RNG seed; draw ``k`` uses ``(seed + 1) * 100003 + k``, the
+            same spread ``stream`` uses. ``None`` (the default)
             leaves the global RNG untouched, so draws are not reproducible.
 
         Returns

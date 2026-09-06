@@ -15,7 +15,7 @@ import numpy as np, torch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src")); sys.path.insert(0, str(ROOT / "benchmark"))
-from _paths import MODELS_DIR  # noqa: E402
+from _paths import DEV, MODELS_DIR  # noqa: E402
 from ddpm_library import DistAttn, metrics                       # noqa: E402
 import _score                                                     # noqa: E402
 
@@ -66,11 +66,15 @@ print("arms found:", [nm for nm, _ in ARMS])
 
 rows, per_case = {}, {}
 for name, p in ARMS:
-    da = DistAttn(device="mps", weights_path=p)
+    da = DistAttn(device=DEV, weights_path=p)
     M, S = [], []
     for i in range(n):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            # 10 draws, not the shipped default of 20: this is a paired
+            # checkpoint ablation, every arm runs at the same size inside this
+            # loop, and the result is the arm-to-arm delta rather than an
+            # absolute level to compare against the cross-model tables.
             m, s = da.predict([tuple(x) for x in obs[i]], n_draws=10,
                               seed=SEED + i, calibrate=False)
         M.append(np.asarray(m, np.float32)); S.append(np.asarray(s, np.float32))

@@ -1,5 +1,10 @@
 # Methods
 
+> **Being regenerated (2026-09-05).** Every DistAttn and RePaint number below
+> predates the fix for their per-draw seed aliasing, and every Stream number
+> predates the `helmholtz_project` symbol fix. CorrDiff, VCNN and GP are
+> unaffected. Do not quote the affected rows until this note is gone.
+
 Data, models, training, and inference for CorrDiff, Stream, DistAttn and RePaint.
 Every value is read from the dataset files, the `.mat` export, the trained
 checkpoints, or `config.py`. None are script defaults.

@@ -24,6 +24,7 @@ import numpy as np, torch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src")); sys.path.insert(0, str(ROOT / "benchmark"))
+from _paths import DEV  # noqa: E402
 from ddpm_library import StreamDDPM, metrics                        # noqa: E402
 import _score                                                        # noqa: E402
 
@@ -55,7 +56,7 @@ n = len(truth)
 print(_score.HEADER)
 per_case = {}
 for name, ckpt in ARMS:
-    st = StreamDDPM(device="mps") if ckpt is None else StreamDDPM(device="mps",
+    st = StreamDDPM(device=DEV) if ckpt is None else StreamDDPM(device=DEV,
                                                                   dir_weights_path=ckpt)
     M, S = [], []
     for i in range(n):
