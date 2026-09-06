@@ -22,7 +22,7 @@ import torch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from _paths import MODELS_DIR  # noqa: E402
+from _paths import DEV, MODELS_DIR  # noqa: E402
 from ddpm_library import StreamDDPM, metrics                 # noqa: E402
 
 LEVEL, SEED = 0.90, 20260830
@@ -42,7 +42,7 @@ half = n // 2
 
 rows, per_case = {}, {}
 for name, path in ARMS.items():
-    st = StreamDDPM(device="mps", dir_weights_path=path)
+    st = StreamDDPM(device=DEV, dir_weights_path=path)
     M, S = [], []
     for i in range(n):
         with warnings.catch_warnings():

@@ -118,11 +118,11 @@ for k, r in rows.items():
 
 v1 = {"corrdiff (1h)": 0.0618, "distattn": 0.0738, "stream (full field)": 0.0908,
       "repaint (1h)": 0.0595}
-print(f"\nv1 -> v1b RMSE:")
+print("\nv1 -> v1b RMSE:")
 for k in MODELS:
     print(f"  {k:<22}{v1[k]:.4f} -> {rows[k]['rmse']:.4f}   ({100*(rows[k]['rmse']/v1[k]-1):+.1f}%)")
 
-print(f"\npaired on v1b:")
+print("\npaired on v1b:")
 for a, b_ in (("corrdiff (1h)", "distattn"), ("corrdiff (1h)", "stream (full field)"),
               ("corrdiff (1h)", "repaint (1h)"), ("repaint (1h)", "distattn")):
     for mtr in ("rmse", "crps"):

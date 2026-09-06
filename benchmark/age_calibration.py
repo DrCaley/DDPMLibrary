@@ -111,7 +111,7 @@ for n in means:
           f"{s['angle_rms_rad'].mean():>12.4f}{'':>10}")
 
 base = scored["corrdiff+priors@full"]["rmse_vector"]
-print(f"\npaired vs the full 2 h track (negative = discarding helps):")
+print("\npaired vs the full 2 h track (negative = discarding helps):")
 best_name, best_mean = "corrdiff+priors@full", base.mean()
 for n in configs:
     if n.endswith("@full"):

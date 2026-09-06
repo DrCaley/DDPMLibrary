@@ -71,7 +71,7 @@ print(f"\n{'model':<24}{'RMSE':>9}{'angle_rms':>11}{'eddy':>8}{'eddy_rot':>10}")
 for k in CFG:
     print(f"{k:<24}{S[k]['rmse_vector'].mean():>9.4f}{S[k]['angle_rms_rad'].mean():>11.4f}"
           f"{np.nanmean(e_raw[k]):>8.4f}{np.nanmean(e_rot[k]):>10.4f}")
-print(f"\nfor reference, from results_final_comparison.pt:")
+print("\nfor reference, from results_final_comparison.pt:")
 print(f"{'corrdiff (1h cutoff)':<24}{0.0618:>9.4f}{0.6842:>11.4f}{0.4308:>8.4f}{0.4397:>10.4f}")
 print(f"{'distattn':<24}{0.0738:>9.4f}{0.7875:>11.4f}{0.3579:>8.4f}{0.3826:>10.4f}")
 
@@ -79,7 +79,7 @@ ref = torch.load(str(ROOT / "benchmark/results_final_comparison.pt"),
                  map_location="cpu", weights_only=False)
 cd1 = ref["per_case_metrics"]["corrdiff (1h cutoff)"]
 cdr = ref["eddy_rot"]["corrdiff (1h cutoff)"].numpy()
-print(f"\npaired vs corrdiff (1h cutoff), same 40 cases:")
+print("\npaired vs corrdiff (1h cutoff), same 40 cases:")
 for k in CFG:
     for m, mine, theirs in (("rmse_vector", S[k]["rmse_vector"], cd1["rmse_vector"].numpy()),
                             ("angle_rms_rad", S[k]["angle_rms_rad"], cd1["angle_rms_rad"].numpy())):

@@ -36,3 +36,7 @@ PICKLES_DIR = Path(os.environ.get(
 #: Where a GPU box wrote training runs. Only used by scripts that score those runs.
 SCRATCH_DIR = Path(os.environ.get("DDPM_SCRATCH_DIR", "/workspace"))
 
+
+#: Which device the scripts run on. ``"auto"`` resolves CUDA > MPS > CPU, so a
+#: script written on the Mac also runs on the GPU box. Override with DDPM_DEVICE.
+DEV = os.environ.get("DDPM_DEVICE", "auto")

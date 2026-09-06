@@ -24,6 +24,7 @@ import numpy as np, torch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src")); sys.path.insert(0, str(ROOT / "benchmark"))
+from _paths import DEV  # noqa: E402
 import ddpm_library.corrdiff_predict as CD                           # noqa: E402
 from ddpm_library import CorrDiff, metrics                           # noqa: E402
 import _score                                                         # noqa: E402
@@ -74,7 +75,7 @@ def run(model, obs_arr, *, n_draws, sensor_noise):
     return np.stack(M), np.stack(S)
 
 HDR = _score.HEADER
-cd = CorrDiff(device="mps")
+cd = CorrDiff(device=DEV)
 out = {}
 
 # ---- Part 1: ensemble size (nested subsets of one 40-draw run) --------------

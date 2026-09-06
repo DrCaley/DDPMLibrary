@@ -16,7 +16,7 @@ from scipy.ndimage import gaussian_filter
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from _paths import MODELS_DIR  # noqa: E402
+from _paths import DEV, MODELS_DIR  # noqa: E402
 from ddpm_library import StreamDDPM, metrics
 
 LEVEL, SEED, z = 0.90, 20260830, 1.6448536269514722
@@ -55,7 +55,7 @@ print(f"{'arm':<26}{'sigma':>6}{'covraw':>8}{'factor':>8}{'covcal':>8}"
       f"{'width':>8}{'CRPScal':>9}{'r(sig,err)':>12}")
 best = {}
 for name, p in ARMS:
-    st = StreamDDPM(device="mps", dir_weights_path=p)
+    st = StreamDDPM(device=DEV, dir_weights_path=p)
     M, S = [], []
     for i in range(n):
         with warnings.catch_warnings():

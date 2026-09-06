@@ -38,6 +38,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "benchmark"))
 import score
 from ddpm_library import CorrDiff, DistAttn, StreamDDPM, GP, VCNN, metrics
+from ddpm_library import config as C                                  # noqa: E402
 from ddpm_library.stream.conditioning import helmholtz_project
 
 BENCH = ROOT / "benchmark/ocean_bench_v1.npz"
@@ -64,7 +65,7 @@ MODELS = {
     "corrdiff (full track)": lambda r, p, i: cd.predict(
         [tuple(x) for x in r], p, n_draws=20, seed=SEED + i)[0],
     "distattn": lambda r, p, i: da.predict(
-        [tuple(x) for x in r], n_draws=10, seed=SEED + i)[0],
+        [tuple(x) for x in r], n_draws=C.DISTATTN_DEFAULT_N_DRAWS, seed=SEED + i)[0],
     "stream (+divergent)": lambda r, p, i: st.predict(
         [tuple(x) for x in r], p, n_draws=20, seed=SEED + i, full_field=True)[0],
     "stream (divfree only)": lambda r, p, i: st.predict(

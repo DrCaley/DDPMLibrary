@@ -87,10 +87,10 @@ d, lo, hi = score.bootstrap_ci(a[ok] - b[ok])
 print(f"  {'eddy_hit_rate':<16}{d:+.5f}  CI [{lo:+.5f}, {hi:+.5f}]  "
       f"{'significant' if (lo>0)==(hi>0) else 'TIED'}")
 
-print(f"\nreference points:")
-print(f"  Stream's divergence-free floor          0.0613")
-print(f"  floor removed entirely (quadrature)     0.0839")
-print(f"  corrdiff (with priors) on this bench    0.0665")
+print("\nreference points:")
+print("  Stream's divergence-free floor          0.0613")
+print("  floor removed entirely (quadrature)     0.0839")
+print("  corrdiff (with priors) on this bench    0.0665")
 
 torch.save({"meta": {"seed": SEED, "benchmark": BENCH.name,
                      "benchmark_md5": hashlib.md5(BENCH.read_bytes()).hexdigest(),

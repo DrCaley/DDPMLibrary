@@ -17,11 +17,10 @@ from scipy.ndimage import gaussian_filter
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+from _paths import DEV  # noqa: E402
 from ddpm_library import CorrDiff, DistAttn, StreamDDPM, metrics   # noqa: E402
-import ddpm_library.config as C                                    # noqa: E402
 
 LEVEL, SEED, z = 0.90, 20260830, 1.6448536269514722
-DEV = "mps"
 TREATMENTS = [0.0, 0.8, 3.2, 12.8, "const"]
 
 b = np.load(ROOT / "benchmark" / "ocean_bench_v1.npz")

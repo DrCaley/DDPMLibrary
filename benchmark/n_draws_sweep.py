@@ -9,8 +9,8 @@ halved from 20 to 10, DistAttn at 10 is worth checking.
 
 Every size is a nested subset of ONE sampling run per case: the sampler is cached, so
 sizes are exactly paired and the sweep costs a single max-size ensemble. DistAttn
-seeds each draw with `seed + k`, so its draw k does not depend on the ensemble size
-at all; Stream's members come from one batched call, and slicing that call's output
+seeds each draw with `(seed + 1) * 100003 + k`, so its draw k does not depend on the
+ensemble size at all; Stream's members come from one batched call, and slicing that call's output
 gives the same nesting.
 
 The conformal factor is refit per size -- the raw ensemble std shrinks with ensemble
@@ -26,13 +26,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src")); sys.path.insert(0, str(ROOT / "benchmark"))
 from ddpm_library import metrics, config as C                                     # noqa: E402
 import _score                                                        # noqa: E402
+from _paths import DEV                                               # noqa: E402
 
 SEED = 20260830
 
 ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
 ap.add_argument("--model", required=True, choices=("stream", "distattn"))
 ap.add_argument("--sizes", default="5,10,20,40")
-ap.add_argument("--device", default="mps")
+ap.add_argument("--device", default=DEV)
 ap.add_argument("--out", default=None)
 args = ap.parse_args()
 SIZES = sorted({int(s) for s in args.sizes.split(",")})
@@ -72,11 +73,12 @@ else:
     def _cached(*a, **kw):
         """Key on (case, per-draw seed).
 
-        The seed alone is NOT a valid key: the predictor sets `seed + k` for draw k,
-        so case i draw k and case i+1 draw k-1 collide on the same value -- and the
-        draw depends on this case's observation tokens, so a collision silently
-        serves one case's field for another. Measured cost of that bug: DistAttn RMSE
-        0.125 instead of 0.073.
+        The seed alone is NOT a valid key. The predictor used to set `seed + k` for
+        draw k, so case i draw k and case i+1 draw k-1 collided on the same value --
+        and the draw depends on this case's observation tokens, so a collision
+        silently served one case's field for another. Measured cost of that bug:
+        DistAttn RMSE 0.125 instead of 0.073. The predictor now spreads its seeds,
+        but the case index stays in the key so this cannot regress.
         """
         key = (_case["i"], torch.initial_seed())
         if key not in cache:

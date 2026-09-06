@@ -13,7 +13,7 @@ import numpy as np, torch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from _paths import MODELS_DIR  # noqa: E402
+from _paths import DEV, MODELS_DIR  # noqa: E402
 from ddpm_library import StreamDDPM, metrics
 
 z, LEVEL, DRAWS = 1.6448536269514722, 0.90, 20
@@ -33,7 +33,7 @@ for bname, bfile, seed in BENCH:
     ocean = np.asarray(b["ocean_mask"], bool)
     n, half = len(truth), len(truth) // 2
     for aname, p in ARMS:
-        st = StreamDDPM(device="mps", dir_weights_path=p)
+        st = StreamDDPM(device=DEV, dir_weights_path=p)
         M, S = [], []
         for i in range(n):
             with warnings.catch_warnings():
