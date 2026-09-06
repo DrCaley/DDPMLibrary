@@ -71,6 +71,10 @@ for name, p in ARMS:
     for i in range(n):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            # 10 draws, not the shipped default of 20: this is a paired
+            # checkpoint ablation, every arm runs at the same size inside this
+            # loop, and the result is the arm-to-arm delta rather than an
+            # absolute level to compare against the cross-model tables.
             m, s = da.predict([tuple(x) for x in obs[i]], n_draws=10,
                               seed=SEED + i, calibrate=False)
         M.append(np.asarray(m, np.float32)); S.append(np.asarray(s, np.float32))

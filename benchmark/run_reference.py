@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "benchmark"))
 import numpy as np
 import score
 from ddpm_library import CorrDiff, DistAttn, StreamDDPM, GP, VCNN
+from ddpm_library import config as C
 
 bench = np.load(str(ROOT / "benchmark/ocean_bench_v1.npz"))
 obs_all, priors_all = bench["observations"], bench["priors"]
@@ -19,7 +20,7 @@ cd, da, st, gp, vc = (CorrDiff(device=DEV), DistAttn(device=DEV),
                       StreamDDPM(device=DEV), GP(), VCNN(device=DEV))
 MODELS = {"corrdiff":         (cd, True,  {"n_draws": 20}),
           "corrdiff_noprior": (cd, False, {"n_draws": 20}),
-          "distattn":         (da, False, {"n_draws": 10}),
+          "distattn":         (da, False, {"n_draws": C.DISTATTN_DEFAULT_N_DRAWS}),
           "stream":           (st, True,  {"n_draws": 20}),
           "gp":               (gp, False, {}),
           "vcnn":             (vc, False, {})}
