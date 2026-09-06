@@ -153,7 +153,7 @@ class DistAttn:
         t_end = times.max()
 
         rows, cols, us, vs, ages, dropped = [], [], [], [], [], 0
-        for (lat, lon, t, u, v) in obs_list:
+        for (lat, lon, t, u, v) in obs_list:            
             i_lat, j_lon = lat_lon_to_index(float(lat), float(lon))
             row, col = j_lon, i_lat                      # library (44,94) -> model (94,44)
             if self.land_np[row, col]:
