@@ -1,5 +1,10 @@
 # Runtime dials and inference cost, measured
 
+> **Being regenerated (2026-09-05).** Every DistAttn and RePaint number below
+> predates the fix for their per-draw seed aliasing, and every Stream number
+> predates the `helmholtz_project` symbol fix. CorrDiff, VCNN and GP are
+> unaffected. Do not quote the affected rows until this note is gone.
+
 `LOSS_TERM_ABLATIONS.md` covers the training-time terms. This covers the
 inference-time dials, which had never been measured, and the per-model cost of a
 field. Sections 1-2 are CorrDiff's `n_draws` and `sensor_noise`; section 3 is Stream's

@@ -1,5 +1,10 @@
 # The paper's three models: final numbers and methods facts
 
+> **Being regenerated (2026-09-05).** Every DistAttn and RePaint number below
+> predates the fix for their per-draw seed aliasing, and every Stream number
+> predates the `helmholtz_project` symbol fix. CorrDiff, VCNN and GP are
+> unaffected. Do not quote the affected rows until this note is gone.
+
 One page to write the paper from. Every number is from the frozen benchmark
 (`benchmark/ocean_bench_v1.npz`, 40 cases, 2 h Dubins-style track, time-varying
 observations, 3749 scored cells; benchmark generation seed 20260829, evaluation seed 20260830) unless marked otherwise, and every

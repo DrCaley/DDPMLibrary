@@ -1,5 +1,10 @@
 # The Okubo-Weiss eddy metric is biased by divergence
 
+> **Being regenerated (2026-09-05).** Every DistAttn and RePaint number below
+> predates the fix for their per-draw seed aliasing, and every Stream number
+> predates the `helmholtz_project` symbol fix. CorrDiff, VCNN and GP are
+> unaffected. Do not quote the affected rows until this note is gone.
+
 **The bias is proven. The correction is not reliable. Read both halves.**
 
 A model is penalised for representing divergence correctly, and a divergence-free
