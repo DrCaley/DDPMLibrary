@@ -9,9 +9,8 @@ Fairness: every model also gets its own split-conformal calibration (factor fitt
 on 20 cases, coverage verified on the other 20). "Calibrated" alone is cheap --
 widening intervals until coverage hits the level always works -- so the meaningful
 comparison is SHARPNESS AT MATCHED CALIBRATION: who needs the narrowest intervals
-to be honest. CorrDiff uses its shipped timed factor up front; the others' raw
-spreads are documented as uncalibrated, so the conformal pass gives each its best
-shot rather than penalising them for not shipping a factor.
+to be honest. Every model here is scored on its RAW ensemble spread and then given
+the same conformal pass, so no model arrives pre-inflated.
 """
 import sys, warnings, hashlib
 from pathlib import Path
@@ -27,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "benchmark"))
 import score
-from ddpm_library import CorrDiff, DistAttn, StreamDDPM, metrics
+from ddpm_library import CorrDiff, DistAttn, RePaint, StreamDDPM, metrics
 from ddpm_library import config as C
 
 BENCH = ROOT / "benchmark/ocean_bench_v1.npz"
@@ -39,6 +38,7 @@ bench = np.load(BENCH)
 obs_all, priors_all, truth = bench["observations"], bench["priors"], bench["truth"]
 ocean = np.asarray(bench["ocean_mask"], bool); n = len(truth)
 cd, da, st = CorrDiff(device=DEV), DistAttn(device=DEV), StreamDDPM(device=DEV)
+rp = RePaint(device=DEV)
 
 
 def fresh(rows, hours):
@@ -46,10 +46,12 @@ def fresh(rows, hours):
     return rows[ages <= hours]
 
 
-# Each model at the configuration the accuracy table uses. CorrDiff's sigma uses
-# the shipped TIMED factor (2.1801; the refit for the 1 h cutoff gave 2.2006).
+# Each model at the configuration the accuracy table uses, all on the raw spread.
+# NOTE: `sigma_scale=` below is inert because `calibrate=False` short-circuits the
+# whole calibration branch. It is kept only to record which shipped factor this arm
+# corresponds to; the numbers this script reports are raw, then conformally refit.
 MODELS = {
-    "corrdiff (1h, timed factor)": lambda r, p, i: cd.predict(
+    "corrdiff (1h, raw spread)": lambda r, p, i: cd.predict(
         [tuple(x) for x in fresh(r, 1.0)], p, n_draws=20, seed=SEED + i,
         sigma_scale=C.CORRDIFF_SIGMA_SCALE_TIMED, calibrate=False),
     "distattn (raw spread)": lambda r, p, i: da.predict(
@@ -62,6 +64,12 @@ MODELS = {
     "stream (1h cutoff)": lambda r, p, i: st.predict(
         [tuple(x) for x in fresh(r, 1.0)], p, n_draws=20, seed=SEED + i,
         full_field=True, calibrate=False),
+    # RePaint ships REPAINT_SIGMA_SCALE_TIMED but was never in this harness, so
+    # its factor went stale when the per-draw seeding changed and nothing caught
+    # it. It is scored here at its own shipped defaults.
+    "repaint (1h, raw spread)": lambda r, p, i: rp.predict(
+        [tuple(x) for x in fresh(r, 1.0)], p, n_draws=C.REPAINT_DEFAULT_N_DRAWS,
+        stride=C.REPAINT_STRIDE, seed=SEED + i, calibrate=False),
 }
 
 means, sigmas = {}, {}

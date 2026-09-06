@@ -312,25 +312,32 @@ class StreamDDPM:
                 f"{self.cond_ch}; check priors/geometry configuration.")
 
         # `coupled_magnitude` standardizes each draw's magnitude ACROSS the
-        # ensemble, so n_draws is structural here, not a speed/quality dial. At
-        # n_draws=1 the z-score is identically zero, so the draw's own magnitude
-        # anomaly is discarded and its speed is set to the heteroscedastic
-        # network's mean everywhere; what magnitude variation survives comes only
-        # from the Helmholtz projection acting on a different direction field.
-        # Stacking single-draw calls therefore does not reconstruct an n_draws=20
-        # ensemble. Measured on bench case 0: RMSE 0.0403 at 1 draw against
-        # 0.0384 at 20.
+        # ensemble, so at n_draws=1 the z-score is identically zero: the draw's own
+        # magnitude anomaly is discarded and its speed is the heteroscedastic
+        # network's mean everywhere, with only the Helmholtz projection putting
+        # variation back through the direction field.
+        #
+        # The MEAN is unharmed by this. Measured over all 40 benchmark cases,
+        # twenty predict(n_draws=1) calls stacked and averaged give RMSE 0.08711
+        # against 0.08718 for one predict(n_draws=20) call.
+        #
+        # The SPREAD is not. Every draw in such a stack carries the same magnitude
+        # field, so its std sees direction only: raw coverage 0.184 against 0.436
+        # for the shipped ensemble, needing a conformal factor near 10.4 where
+        # STREAM_SIGMA_SCALE_TIMED is 3.147. A stacked spread needs its own factor.
         if n_draws < C.STREAM_MIN_COUPLED_DRAWS:
             warnings.warn(
                 f"StreamDDPM: n_draws={n_draws} is below "
                 f"{C.STREAM_MIN_COUPLED_DRAWS}. The coupled-magnitude fuse "
-                f"standardizes magnitudes across the ensemble, so at this size "
-                f"the magnitude carries little of the diffusion's own spread"
-                + (" (at n_draws=1, none of it: every draw is given the "
-                   "network's mean speed before projection)." if n_draws == 1
-                   else ".")
-                + " Averaging several small calls is not equivalent to one call "
-                  "with the same total number of draws.",
+                f"standardizes magnitudes across the ensemble, so at this size the "
+                f"magnitude carries little of the diffusion's own spread"
+                + (" (at n_draws=1, none of it: every draw is given the network's "
+                   "mean speed before projection)." if n_draws == 1 else ".")
+                + " The MEAN is unaffected -- stacking small calls matches one "
+                  "large call. The SPREAD is not: a std computed over stacked "
+                  "single-draw calls is far narrower than this model's own "
+                  "ensemble spread, and STREAM_SIGMA_SCALE_TIMED does not apply "
+                  "to it. Fit your own factor if you calibrate that spread.",
                 RuntimeWarning, stacklevel=2)
 
         # --- diffusion ensemble (direction) + coupled magnitude fuse ---

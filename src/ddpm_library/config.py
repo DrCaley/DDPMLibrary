@@ -128,11 +128,15 @@ STREAM_MIN_COUPLED_DRAWS = 5
 #: coverage 0.895 at the 0.90 level; applied blind to all of ocean_bench_v1b it
 #: gives 0.910 at width 0.221. Multiply the returned uncertainty by this for
 #: calibrated intervals.
-#: MEASURED -- do not edit by hand without re-fitting. It is coupled to BOTH the
-#: sampler step count and STREAM_UNC_SMOOTH_SIGMA: 2.909 at 6 steps with sigma 0.8,
-#: 3.304 at 2 steps with sigma 0.8, and 3.165 at 2 steps with sigma 3.2 (current).
-#: Re-fit if either STREAM_DPMPP_STEPS or STREAM_UNC_SMOOTH_SIGMA changes.
-STREAM_SIGMA_SCALE_TIMED = 3.165   # used by the uncertainty-map scripts
+#: MEASURED -- do not edit by hand without re-fitting. It is coupled to the sampler
+#: step count, to STREAM_UNC_SMOOTH_SIGMA, and to the `helmholtz_project` symbol:
+#: 2.909 at 6 steps with sigma 0.8, 3.304 at 2 steps with sigma 0.8, 3.165 at 2
+#: steps with sigma 3.2 under the old continuous Fourier symbol, and 3.147 at the
+#: current settings under the discrete central-difference symbol. Re-fit if any of
+#: those three change.
+#: REFIT 2026-09-05 by `benchmark/uncertainty_final.py` after the symbol fix:
+#: 40 cases of ocean_bench_v1, 20 fit / 20 verify, held-out coverage 0.8929.
+STREAM_SIGMA_SCALE_TIMED = 3.147   # used by the uncertainty-map scripts
 
 # The stream-function + div-free-noise scheme uses central differences, whose
 # Fourier symbol vanishes at the Nyquist frequency, so grid-scale (checkerboard)
@@ -204,6 +208,9 @@ CORRDIFF_SIGMA_SCALE = 1.6787   # MEASURED: split conformal, 60 held-out frames,
 # observations were collected over a period rather than simultaneously.
 # MEASURED by `scripts/staleness.py recalibrate`: split conformal, 58 frames (29 fit /
 # 29 verify), out-of-sample coverage 0.9096 vs 0.900 target; intervals 1.24x wider.
+# CROSS-CHECK 2026-09-05: `benchmark/uncertainty_final.py` fits 2.201 on its own
+# 40 benchmark cases, 1% from the value below. Different set, different split, and
+# CorrDiff's code is unchanged by the audit, so the 58-frame fit above stands.
 CORRDIFF_SIGMA_SCALE_TIMED = 2.1801
 
 
@@ -265,6 +272,9 @@ REPAINT_FITTED_N_DRAWS = 10
 #: spread. It also corrects the record: RePaint calibrates as well as the others
 #: (0.911 blind, against corrdiff 0.917 / stream 0.910 / distattn 0.894), so the
 #: reason to prefer CorrDiff is its 41x lower cost, not interval quality.
+#: STALE as of 2026-09-05: fitted before RePaint's per-draw seeding was fixed, and
+#: RePaint is not in `benchmark/uncertainty_final.py`, so nothing refit it. RePaint
+#: is not one of the three paper models. Refit before quoting this number.
 REPAINT_SIGMA_SCALE_TIMED = 2.4513
 
 
@@ -307,13 +317,15 @@ DISTATTN_STRIDE = 10
 #: Split-conformal factor for DistAttn's raw ensemble spread on 2 h time-varying
 #: collection, fitted on the first 20 cases of ocean_bench_v1 with coverage verified
 #: on the other 20. predict() applies it; pass calibrate=False for the raw spread.
-#: MEASURED 2026-09-04 -- do not edit by hand without re-fitting.
-#: REFIT from 1.621 when DISTATTN_DEFAULT_N_DRAWS went 10 -> 20: a 20-draw ensemble
-#: is less under-dispersed than a 10-draw one, so it needs less inflation. Held-out
-#: coverage 0.891 against the 0.90 target, where the n=10 factor gave 0.899 --
-#: marginally under rather than over, at intervals 14% narrower. The sharper
-#: intervals are why 20 wins on calibrated CRPS.
-DISTATTN_SIGMA_SCALE_TIMED = 1.3592
+#: MEASURED -- do not edit by hand without re-fitting.
+#: History: 1.621 at n_draws=10; 1.3592 when the default went 10 -> 20, because a
+#: 20-draw ensemble is less under-dispersed and needs less inflation.
+#: REFIT 2026-09-05 to 1.490 by `benchmark/uncertainty_final.py` after the per-draw
+#: seeding was fixed. The old value was fitted while neighbouring benchmark cases
+#: shared 19 of their 20 noise draws, so the fit and verify halves were not
+#: independent and the factor came out too small. 40 cases, 20 fit / 20 verify,
+#: held-out coverage 0.9006 against the 0.90 target.
+DISTATTN_SIGMA_SCALE_TIMED = 1.490
 #: MEASURED 2026-09-04, raised 10 -> 20. The 10 was inherited from the collaborator's
 #: evaluation, not swept here. At 20 the model is significantly better on four of six
 #: metrics (calibrated CRPS -0.00093, vorticity correlation +0.0135, vorticity RMSE
