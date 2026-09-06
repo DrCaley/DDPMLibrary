@@ -201,6 +201,7 @@ class DistAttn:
         n_draws: int = C.DISTATTN_DEFAULT_N_DRAWS,
         stride: int = C.DISTATTN_STRIDE,
         seed=None,
+        priors=None, # Dummy argument
         calibrate: bool = True,
         sigma_scale: Optional[float] = None,
     ) -> tuple[np.ndarray, np.ndarray]:
