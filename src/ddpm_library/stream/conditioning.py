@@ -181,25 +181,65 @@ def coupled_magnitude(members, speed_mu, speed_sigma, ocean_np):
     return out
 
 
-def helmholtz_project(field, ocean_mask, max_iters=5, tol=1e-4):
-    """Iterative FFT Helmholtz projection to remove the divergent component."""
+def helmholtz_project(field, ocean_mask, max_iters=5, tol=1e-4, symbol="discrete"):
+    """Iterative FFT Helmholtz projection to remove the divergent component.
+
+    ``symbol`` selects the Fourier derivative symbol:
+
+      "continuous"            k = 2*pi*f      -- what Stream numbers before
+                                                 2026-09-05 were produced with
+      "discrete" (default)    k = sin(2*pi*f) -- the central-difference symbol,
+                                                 matching both the divergence
+                                                 operator these fields are scored
+                                                 with and `leray_project`, which
+                                                 built the training data
+
+    "discrete" is the mathematically consistent choice: it matches the operator the
+    fields are scored with, and on real prior fields leaves 1.2e-04 divergence
+    against "continuous"'s 1.1e-03. It costs a little accuracy. Paired over the 40
+    benchmark cases, discrete minus continuous:
+
+        rmse       +0.000646  CI [+0.000363, +0.000991]  worse
+        angle      +0.005361  CI [+0.001702, +0.009281]  worse
+        vort_rmse  +0.000346  CI [+0.000277, +0.000426]  worse
+        vort_corr  -0.010692  CI [-0.013427, -0.008259]  worse
+        div_rmse   -0.000473  CI [-0.000577, -0.000374]  better
+        crps_cal   +0.000085  CI [-0.000004, +0.000184]  tied
+
+    The reason is that the truth is not divergence-free. A partial projection leaves
+    residual divergence that happens to sit closer to the real thing than a clean
+    projection plus the VCNN's estimated divergent component does. Consistency with
+    the training-data projection was judged worth that cost.
+    STREAM_SIGMA_SCALE_TIMED should be refit for this setting (measured 3.147).
+    """
     land = ~ocean_mask
     ux = field[0].copy().astype(np.float64); ux[land] = 0.0
     uy = field[1].copy().astype(np.float64); uy[land] = 0.0
     H, W = ux.shape
-    kx = np.fft.fftfreq(H, d=1.0 / (2 * np.pi))[:, None]
-    ky = np.fft.rfftfreq(W, d=1.0 / (2 * np.pi))[None, :]
-    k2 = kx ** 2 + ky ** 2; k2[0, 0] = 1.0
+    if symbol == "discrete":
+        kx = np.sin(2 * np.pi * np.fft.fftfreq(H, d=1.0))[:, None]
+        ky = np.sin(2 * np.pi * np.fft.rfftfreq(W, d=1.0))[None, :]
+    elif symbol == "continuous":
+        kx = np.fft.fftfreq(H, d=1.0 / (2 * np.pi))[:, None]
+        ky = np.fft.rfftfreq(W, d=1.0 / (2 * np.pi))[None, :]
+    else:
+        raise ValueError(f"symbol must be 'continuous' or 'discrete'; got {symbol!r}")
+    k2 = kx ** 2 + ky ** 2
+    k2_safe = np.where(k2 > 0.0, k2, 1.0)      # DC and Nyquist: sin() vanishes
     interior = np.zeros((H, W), bool); interior[1:-1, 1:-1] = True
     check = interior & ocean_mask
     prev = np.inf
     for _ in range(max_iters):
         Ux = np.fft.rfft2(ux); Uy = np.fft.rfft2(uy)
-        Phi = -(1j * kx * Ux + 1j * ky * Uy) / k2; Phi[0, 0] = 0.0
+        Phi = -(1j * kx * Ux + 1j * ky * Uy) / k2_safe
+        Phi[k2 == 0.0] = 0.0
         ux = np.fft.irfft2(Ux - 1j * kx * Phi, s=(H, W)); ux[land] = 0.0
         uy = np.fft.irfft2(Uy - 1j * ky * Phi, s=(H, W)); uy[land] = 0.0
-        dux = np.zeros_like(ux); dux[:, 1:-1] = (ux[:, 2:] - ux[:, :-2]) / 2
-        duy = np.zeros_like(uy); duy[1:-1] = (uy[2:] - uy[:-2]) / 2
+        # divergence is d(ux)/d0 + d(uy)/d1, matching how kx/ky are paired above.
+        # This previously used the transposed pairing, so the early-exit tolerance
+        # fired on a quantity that was not the divergence.
+        dux = np.zeros_like(ux); dux[1:-1, :] = (ux[2:, :] - ux[:-2, :]) / 2
+        duy = np.zeros_like(uy); duy[:, 1:-1] = (uy[:, 2:] - uy[:, :-2]) / 2
         cur = float(np.abs(dux + duy)[check].mean())
         if abs(prev - cur) / (prev + 1e-12) < tol:
             break
