@@ -13,7 +13,7 @@ from .sampler import ensemble_infer, dpmpp_ensemble, sample_one
 from .conditioning import (
     geometry_channels, observation_channels, assemble_cond, build_conditioning,
     load_hetero_magnitude_model, predict_speed_mean_sigma, coupled_magnitude,
-    helmholtz_project, fuse_coupled,
+    helmholtz_project, leray_project, fuse_coupled,
     directional_spread, vector_spread, magnitude_spread, pcorr, EPS,
 )
 
@@ -24,6 +24,7 @@ __all__ = [
     "geometry_channels", "observation_channels", "assemble_cond",
     "build_conditioning", "load_hetero_magnitude_model",
     "predict_speed_mean_sigma", "coupled_magnitude", "helmholtz_project",
+    "leray_project",
     "fuse_coupled", "directional_spread", "vector_spread", "magnitude_spread",
     "pcorr", "EPS",
 ]

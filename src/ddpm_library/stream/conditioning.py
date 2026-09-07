@@ -181,6 +181,52 @@ def coupled_magnitude(members, speed_mu, speed_sigma, ocean_np):
     return out
 
 
+def leray_project(field, ocean_mask):
+    """Single-shot spectral projection onto the divergence-free subspace.
+
+    A faithful port of ``leray_project`` in the training repo
+    (``DDPM/model/divfree_projection.py``), which is the operator that built the
+    divergence-free training fields. "Leray projection" and "Helmholtz
+    projection" name the same operation; the two implementations exist only
+    because they were written separately in two codebases.
+
+    Use this for anything the model must see IN DISTRIBUTION -- the prior
+    channels -- so inference reproduces the operator the training priors carry.
+    Use :func:`helmholtz_project` for output-side cleanup, where there is no
+    training counterpart to match and the iterated version is the better
+    projector.
+
+    The two differ by ~6% of field magnitude. Zeroing land after projecting
+    reintroduces divergence at the coastline; this stops there, as training did
+    (residual divergence ~0.003), while `helmholtz_project` iterates that away
+    (~0.001). It also drops the Nyquist row and column, where the
+    central-difference symbol sin() vanishes and the projection has no purchase.
+    """
+    ocean = np.asarray(ocean_mask, bool)
+    x = np.asarray(field, np.float64).copy()
+    x[:, ~ocean] = 0.0
+    H, W = ocean.shape
+
+    hu, hv = np.fft.fft2(x[0]), np.fft.fft2(x[1])
+    if H % 2 == 0:
+        hu[H // 2, :] = 0.0; hv[H // 2, :] = 0.0
+    if W % 2 == 0:
+        hu[:, W // 2] = 0.0; hv[:, W // 2] = 0.0
+
+    sH = np.sin(2 * np.pi * np.fft.fftfreq(H, d=1.0))[:, None]
+    sW = np.sin(2 * np.pi * np.fft.fftfreq(W, d=1.0))[None, :]
+    s2 = sH ** 2 + sW ** 2
+    s2_safe = np.where(s2 > 0.0, s2, 1.0)
+
+    dot = sH * hu + sW * hv
+    u = np.fft.ifft2(hu - sH * dot / s2_safe).real
+    v = np.fft.ifft2(hv - sW * dot / s2_safe).real
+
+    out = np.stack([u, v], axis=0).astype(np.float32)
+    out[:, ~ocean] = 0.0
+    return out
+
+
 def helmholtz_project(field, ocean_mask, max_iters=5, tol=1e-4, symbol="discrete"):
     """Iterative FFT Helmholtz projection to remove the divergent component.
 

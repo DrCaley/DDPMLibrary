@@ -41,7 +41,7 @@ from .rasterize import observations_to_channels
 from .stream import (
     DDPM, StreamFunctionUNet, ensemble_infer, dpmpp_ensemble,
     geometry_channels, build_conditioning, load_hetero_magnitude_model,
-    fuse_coupled, helmholtz_project,
+    fuse_coupled, helmholtz_project, leray_project,
 )
 
 
@@ -211,10 +211,13 @@ class StreamDDPM:
             p_std = self._standardize(p_model).astype(np.float32)
             p_std[:, self.land_np] = 0.0
             if project:
-                # Match the training data's Leray/Helmholtz projection so the
-                # divergent component of a real prior doesn't shift the input
-                # out of distribution. (Linear + land-zeroing → scale-safe.)
-                p_std = helmholtz_project(p_std, self.ocean_np)
+                # Use the SAME operator that built the training fields, so a
+                # real prior's divergent component doesn't shift the input out of
+                # distribution. `helmholtz_project` iterates the coastline
+                # residual away and lands ~6% from what training carries; this is
+                # the input side, so matching training wins over the cleaner
+                # projection. (Linear + land-zeroing → scale-safe.)
+                p_std = leray_project(p_std, self.ocean_np)
             chans.append(p_std)
         return np.concatenate(chans, axis=0).astype(np.float32)
 

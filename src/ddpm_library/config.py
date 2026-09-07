@@ -134,9 +134,13 @@ STREAM_MIN_COUPLED_DRAWS = 5
 #: steps with sigma 3.2 under the old continuous Fourier symbol, and 3.147 at the
 #: current settings under the discrete central-difference symbol. Re-fit if any of
 #: those three change.
-#: REFIT 2026-09-05 by `benchmark/uncertainty_final.py` after the symbol fix:
-#: 40 cases of ocean_bench_v1, 20 fit / 20 verify, held-out coverage 0.8929.
-STREAM_SIGMA_SCALE_TIMED = 3.147   # used by the uncertainty-map scripts
+#: REFIT 2026-09-05 after the symbol fix (3.147, coverage 0.8929), then again
+#: after the prior channels moved to `leray_project`, the single-shot operator
+#: that built the training fields: 3.155, held-out coverage 0.8923. 40 cases of
+#: ocean_bench_v1, 20 fit / 20 verify. The two prior projections are TIED on
+#: accuracy (+0.000291, CI [-0.000215, +0.000838]); the switch was made for
+#: training/inference consistency, not for a gain.
+STREAM_SIGMA_SCALE_TIMED = 3.155   # used by the uncertainty-map scripts
 
 # The stream-function + div-free-noise scheme uses central differences, whose
 # Fourier symbol vanishes at the Nyquist frequency, so grid-scale (checkerboard)
