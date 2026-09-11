@@ -54,6 +54,7 @@ so cost scales linearly with ``n_draws``.
 
 from __future__ import annotations
 
+import math
 import warnings
 from collections.abc import Iterable, Sequence
 from pathlib import Path
@@ -149,11 +150,30 @@ class DistAttn:
         where a library ``(i_lat, j_lon)`` index maps to ``(row, col) =
         (j_lon, i_lat)``. Ages are relative to the NEWEST observation supplied.
         """
-        times = np.array([float(o[2]) for o in obs_list], dtype=np.float64)
+        # Drop non-finite readings BEFORE t_end: a single NaN timestamp would
+        # otherwise poison t_end and hence every age. Unlike the gridded models
+        # this one consumes the timestamp, so it is checked too.
+        usable, nonfinite = [], 0
+        for o in obs_list:
+            if all(math.isfinite(float(x)) for x in (o[0], o[1], o[2], o[3], o[4])):
+                usable.append(o)
+            else:
+                nonfinite += 1
+        if nonfinite:
+            warnings.warn(
+                f"{nonfinite} of {len(obs_list)} observations had a non-finite "
+                f"lat, lon, time, u or v and were dropped.",
+                RuntimeWarning, stacklevel=3)
+        if not usable:
+            raise ValueError(
+                f"all {len(obs_list)} observations had a non-finite value; "
+                f"nothing to condition on.")
+
+        times = np.array([float(o[2]) for o in usable], dtype=np.float64)
         t_end = times.max()
 
         rows, cols, us, vs, ages, dropped = [], [], [], [], [], 0
-        for (lat, lon, t, u, v) in obs_list:            
+        for (lat, lon, t, u, v) in usable:
             i_lat, j_lon = lat_lon_to_index(float(lat), float(lon))
             row, col = j_lon, i_lat                      # library (44,94) -> model (94,44)
             if self.land_np[row, col]:
@@ -167,7 +187,7 @@ class DistAttn:
 
         if dropped:
             warnings.warn(
-                f"{dropped} of {len(obs_list)} observations snapped onto land cells "
+                f"{dropped} of {len(usable)} usable observations snapped onto land cells "
                 f"of this model's mask and were dropped.",
                 stacklevel=3,
             )

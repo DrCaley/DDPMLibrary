@@ -7,6 +7,8 @@ time-conditioned).
 
 from __future__ import annotations
 
+import math
+import warnings
 from collections.abc import Iterable, Sequence
 from typing import Tuple
 
@@ -34,16 +36,33 @@ def observations_to_channels(
     sum_v = np.zeros((OCEAN_H, OCEAN_W), dtype=np.float32)
     counts = np.zeros((OCEAN_H, OCEAN_W), dtype=np.int32)
 
+    n_seen = dropped = 0
     for obs in observations:
         if len(obs) != 5:
             raise ValueError(
                 f"Each observation must be (lat, lon, unix_t, u, v); got length {len(obs)}"
             )
         lat, lon, _unix_t, u, v = obs
+        n_seen += 1
+        # Real sensor data drops samples. Without this the NaN scatters into the
+        # conditioning and every model returns an all-NaN field with no error.
+        # The timestamp is not checked: it is unused here.
+        if not all(math.isfinite(float(x)) for x in (lat, lon, u, v)):
+            dropped += 1
+            continue
         i_lat, j_lon = lat_lon_to_index(float(lat), float(lon))
         sum_u[i_lat, j_lon] += float(u)
         sum_v[i_lat, j_lon] += float(v)
         counts[i_lat, j_lon] += 1
+
+    if dropped:
+        warnings.warn(
+            f"{dropped} of {n_seen} observations had a non-finite lat, lon, u or v "
+            f"and were dropped.", RuntimeWarning, stacklevel=2)
+    if dropped and not counts.any():
+        raise ValueError(
+            f"all {n_seen} observations had a non-finite lat, lon, u or v; "
+            f"nothing to condition on.")
 
     observed = counts > 0
     safe = np.where(observed, counts, 1).astype(np.float32)
