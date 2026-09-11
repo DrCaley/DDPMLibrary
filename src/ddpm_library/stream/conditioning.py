@@ -60,11 +60,16 @@ def geometry_channels(land_mask: np.ndarray,
 def observation_channels(field: torch.Tensor,
                          path_mask: np.ndarray,
                          land_np: np.ndarray,
-                         legacy: bool = False) -> torch.Tensor:
+                         legacy: bool = False,
+                         abs_dist: bool = False) -> torch.Tensor:
     """Soft-observation channels by revealing ``field`` on a path.
 
     legacy=True → [obs_u, obs_v, path_mask] (3ch, the old cond_ch=10 pipeline).
-    legacy=False → adds dist_to_path (4ch).
+    legacy=False → adds dist_to_path, normalised by this frame's max (4ch).
+    abs_dist=True → also adds distance on a FIXED scale (5ch, cond_ch=12). The
+    per-frame channel says where a cell ranks within this frame's coverage; the
+    absolute one says how far away it actually is, so a dense track and a sparse
+    one stop looking identical.
     """
     from scipy import ndimage
 
@@ -82,9 +87,13 @@ def observation_channels(field: torch.Tensor,
     dist[land_np] = 0.0
     dist_t = torch.from_numpy(dist)[None]
 
-    if legacy:
-        return torch.cat([obs, mask], dim=0)          # (3, H, W)
-    return torch.cat([obs, mask, dist_t], dim=0)      # (4, H, W)
+    chans = [obs, mask] if legacy else [obs, mask, dist_t]
+    if abs_dist:
+        # Fixed divisor, land left unmasked -- matches DIST_SCALE in
+        # `corrdiff.conditioning` and `Utils/cond_dataset.py` exactly.
+        raw = ndimage.distance_transform_edt(~pm_np).astype(np.float32) / 20.0
+        chans.append(torch.from_numpy(raw)[None])
+    return torch.cat(chans, dim=0)
 
 
 def assemble_cond(obs: torch.Tensor, priors: torch.Tensor,
@@ -99,7 +108,8 @@ def build_conditioning(obs_field_std: np.ndarray,
                        land_np: np.ndarray,
                        geom: torch.Tensor,
                        *,
-                       legacy_obs: bool) -> torch.Tensor:
+                       legacy_obs: bool,
+                       abs_dist: bool = False) -> torch.Tensor:
     """Assemble the (C, H, W) conditioning tensor from standardized arrays.
 
     Parameters
@@ -110,9 +120,11 @@ def build_conditioning(obs_field_std: np.ndarray,
     land_np       : (H, W) bool, True = land.
     geom          : (n_geom, H, W) static geometry (precomputed).
     legacy_obs    : True for the old cond_ch=10 model (3 obs channels).
+    abs_dist      : True for cond_ch=12 (adds the fixed-scale distance).
     """
     obs = observation_channels(torch.from_numpy(obs_field_std.astype(np.float32)),
-                               path_mask, land_np, legacy=legacy_obs)
+                               path_mask, land_np, legacy=legacy_obs,
+                               abs_dist=abs_dist)
     priors_t = torch.from_numpy(priors_std.astype(np.float32))
     return assemble_cond(obs, priors_t, geom)
 

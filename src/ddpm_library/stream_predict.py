@@ -134,8 +134,12 @@ class StreamDDPM:
             noise_type=ca.get("noise_type", C.STREAM_NOISE_TYPE),
             spectral_filter=dckpt.get("spectral_filter", None),
         )
-        # legacy obs layout (3 obs channels) when cond_ch <= 10
+        # obs-channel layout is set by the checkpoint's cond_ch:
+        #   10 -> legacy 3 obs channels (no distance at all)
+        #   11 -> + dist_to_path, normalised by this frame's max
+        #   12 -> + distance on a fixed scale, as CorrDiff has
         self._legacy_obs = self.cond_ch <= 10
+        self._abs_dist = self.cond_ch >= 12
 
         # --- heteroscedastic magnitude model ---
         mag_path = Path(mag_weights_path) if mag_weights_path else C.STREAM_MAG_WEIGHTS_PATH
@@ -313,7 +317,7 @@ class StreamDDPM:
 
         cond = build_conditioning(
             obs_field_std, path_mask, priors_std, self.land_np, self.geom,
-            legacy_obs=self._legacy_obs,
+            legacy_obs=self._legacy_obs, abs_dist=self._abs_dist,
         )
         if cond.shape[0] != self.cond_ch:
             raise RuntimeError(
